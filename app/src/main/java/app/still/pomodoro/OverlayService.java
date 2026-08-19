@@ -15,9 +15,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class OverlayService extends Service implements OverlayChipView.Host {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
-    private static final int COLLAPSED_WIDTH_DP = 150;
-    private static final int EXPANDED_WIDTH_DP = 210;
-    private static final int HEIGHT_DP = 52;
+    private static final int COLLAPSED_WIDTH_DP = 126;
+    private static final int EXPANDED_WIDTH_DP = 186;
+    private static final int HEIGHT_DP = 46;
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams params;
@@ -48,9 +48,9 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = getResources().getDisplayMetrics().widthPixels - params.width - Ui.dp(this, 14);
-        params.y = Ui.dp(this, 96);
-        params.alpha = 0.98f;
+        params.x = getResources().getDisplayMetrics().widthPixels - params.width - Ui.dp(this, 12);
+        params.y = Ui.dp(this, 92);
+        params.alpha = 0.99f;
         windowManager.addView(chip, params);
 
         if (Build.VERSION.SDK_INT >= 34) {
@@ -87,10 +87,10 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
     @Override public void snapToEdge() {
         if (params == null || windowManager == null) return;
         int screen = getResources().getDisplayMetrics().widthPixels;
-        int target = params.x + params.width / 2 < screen / 2 ? Ui.dp(this, 10) : screen - params.width - Ui.dp(this, 10);
+        int target = params.x + params.width / 2 < screen / 2 ? Ui.dp(this, 9) : screen - params.width - Ui.dp(this, 9);
         if (snapAnimator != null) snapAnimator.cancel();
         snapAnimator = ValueAnimator.ofInt(params.x, target);
-        snapAnimator.setDuration(170L);
+        snapAnimator.setDuration(160L);
         snapAnimator.addUpdateListener(a -> {
             params.x = (int) a.getAnimatedValue();
             try { windowManager.updateViewLayout(chip, params); } catch (IllegalArgumentException ignored) {}
@@ -112,6 +112,6 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
 
     private void clampY() {
         int screen = getResources().getDisplayMetrics().heightPixels;
-        params.y = Math.max(Ui.dp(this, 24), Math.min(screen - params.height - Ui.dp(this, 24), params.y));
+        params.y = Math.max(Ui.dp(this, 22), Math.min(screen - params.height - Ui.dp(this, 22), params.y));
     }
 }
