@@ -23,6 +23,7 @@ final class NotificationHelper {
     private static final String FOCUS_DONE_CHANNEL = "focus_done_v1";
     private static final String BREAK_DONE_CHANNEL = "break_done_v1";
     static final String OVERLAY_CHANNEL = "overlay";
+    private static final String ACTIVE_GROUP = "still_active";
 
     static void ensureChannels(Context context) {
         NotificationManager nm = context.getSystemService(NotificationManager.class);
@@ -66,10 +67,11 @@ final class NotificationHelper {
         long remaining = Math.max(0L, state.endAtMillis - System.currentTimeMillis());
         Notification.Builder b = baseTimerBuilder(context)
                 .setContentTitle(titleCase(engine.phaseLabel(state.phase)))
-                .setContentText("Running")
+                .setContentText(sessionText(engine, state))
                 .setWhen(System.currentTimeMillis() + remaining)
                 .setUsesChronometer(true)
                 .setChronometerCountDown(true)
+                .setProgress(1000, elapsedProgress(engine, state, remaining), false)
                 .setOngoing(true)
                 .addAction(action(context, android.R.drawable.ic_media_pause, "Pause", ActionReceiver.PAUSE, 11))
                 .addAction(action(context, android.R.drawable.ic_media_next, "Skip", ActionReceiver.SKIP, 12))
@@ -81,8 +83,10 @@ final class NotificationHelper {
         ensureChannels(context);
         TimerEngine engine = new TimerEngine(context);
         Notification.Builder b = baseTimerBuilder(context)
-                .setContentTitle(titleCase(engine.phaseLabel(state.phase)))
-                .setContentText("Paused · " + formatTime(state.remainingMillis))
+                .setContentTitle(titleCase(engine.phaseLabel(state.phase)) + " · paused")
+                .setContentText(formatTime(state.remainingMillis) + " remaining · " + sessionText(engine, state).toLowerCase(java.util.Locale.US))
+                .setProgress(1000, elapsedProgress(engine, state, state.remainingMillis), false)
+                .setShowWhen(false)
                 .setOngoing(false)
                 .addAction(action(context, android.R.drawable.ic_media_play, "Resume", ActionReceiver.START, 21))
                 .addAction(action(context, android.R.drawable.ic_media_next, "Skip", ActionReceiver.SKIP, 22))
@@ -96,17 +100,21 @@ final class NotificationHelper {
         String channel = focusCompleted ? FOCUS_DONE_CHANNEL : BREAK_DONE_CHANNEL;
         TimerEngine engine = new TimerEngine(context);
         String title = focusCompleted ? "Focus complete" : "Break complete";
-        String body = titleCase(engine.phaseLabel(next.phase)) + " is ready";
+        String body = titleCase(engine.phaseLabel(next.phase)) + (next.running ? " started" : " is ready");
         Notification.Builder b = new Notification.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(Color.rgb(216, 255, 106))
                 .setContentTitle(title)
                 .setContentText(body)
+                .setSubText("Still")
                 .setContentIntent(openApp(context))
                 .setAutoCancel(true)
                 .setCategory(Notification.CATEGORY_ALARM)
                 .setPriority(Notification.PRIORITY_HIGH)
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
+        if (!next.running) {
+            b.addAction(action(context, android.R.drawable.ic_media_play, "Start", ActionReceiver.START, 31));
+        }
         notify(context, COMPLETION_ID, b.build());
         if (vibrate) vibrate(context);
     }
@@ -115,12 +123,17 @@ final class NotificationHelper {
         ensureChannels(context);
         return new Notification.Builder(context, OVERLAY_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Floating timer active")
-                .setContentText("Tap to return to Still")
+                .setColor(Color.rgb(216, 255, 106))
+                .setContentTitle("Floating timer")
+                .setContentText("Tap to open Still")
+                .setSubText("Still")
                 .setContentIntent(openApp(context))
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setShowWhen(false)
                 .setCategory(Notification.CATEGORY_SERVICE)
+                .setGroup(ACTIVE_GROUP)
+                .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
                 .build();
     }
 
@@ -133,11 +146,14 @@ final class NotificationHelper {
         return new Notification.Builder(context, TIMER_CHANNEL)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setColor(Color.rgb(216, 255, 106))
+                .setSubText("Still")
                 .setContentIntent(openApp(context))
                 .setOnlyAlertOnce(true)
                 .setCategory(Notification.CATEGORY_PROGRESS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
-                .setShowWhen(true);
+                .setShowWhen(true)
+                .setGroup(ACTIVE_GROUP)
+                .setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY);
     }
 
     private static Notification.Action action(Context context, int icon, String title, String action, int requestCode) {
@@ -159,6 +175,18 @@ final class NotificationHelper {
 
     private static Uri resourceUri(Context context, int id) {
         return Uri.parse("android.resource://" + context.getPackageName() + "/" + id);
+    }
+
+    private static int elapsedProgress(TimerEngine engine, TimerState state, long remaining) {
+        long duration = Math.max(1L, engine.durationFor(state.phase));
+        long elapsed = Math.max(0L, Math.min(duration, duration - remaining));
+        return (int) Math.min(1000L, (elapsed * 1000L) / duration);
+    }
+
+    private static String sessionText(TimerEngine engine, TimerState state) {
+        int total = Math.max(1, engine.cycleSize());
+        int current = Math.min(total, Math.max(1, state.focusInCycle + 1));
+        return "Session " + current + " of " + total;
     }
 
     private static String formatTime(long millis) {
