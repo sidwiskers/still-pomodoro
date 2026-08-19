@@ -1,0 +1,64 @@
+name: Runtime smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launch:
+    name: Android API ${{ matrix.api }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [26, 30, 35]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 9.5
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.5.0'
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug
+
+      - name: Launch and detect runtime crash
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb logcat -c
+            adb shell am force-stop app.still.pomodoro.debug
+            adb shell am start -W -n app.still.pomodoro.debug/app.still.pomodoro.MainActivity
+            sleep 4
+            adb logcat -d > runtime-logcat.txt
+            cat runtime-logcat.txt
+            if grep -A 80 -B 10 -E 'FATAL EXCEPTION|Process: app\.still\.pomodoro\.debug' runtime-logcat.txt; then
+              exit 1
+            fi
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|app.still.pomodoro.debug'
+
+      - name: Upload logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-logcat-api-${{ matrix.api }}
+          path: runtime-logcat.txt
+          if-no-files-found: ignore
