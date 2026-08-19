@@ -131,8 +131,9 @@ final class TimerDialView extends View {
         canvas.drawText(clock, cx, timeBaseline, time);
 
         String phaseLabel = phaseText.toUpperCase(Locale.US).replace(" BREAK", "");
+        String status = state.running ? "in focus" : (state.remainingMillis < duration ? "paused" : "ready");
         canvas.drawText(phaseLabel, cx, cy - radius * 0.40f, phase);
-        canvas.drawText(state.running ? "quietly in progress" : "ready when you are", cx, cy + radius * 0.41f, hint);
+        canvas.drawText(status, cx, cy + radius * 0.41f, hint);
 
         drawSessionDots(canvas, cx, cy + radius, cycleSize, state.focusInCycle);
     }
