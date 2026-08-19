@@ -27,6 +27,7 @@ final class OverlayChipView extends View {
     private final Paint surface = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint accent = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint accentSoft = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint time = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint meta = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glyph = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -48,20 +49,27 @@ final class OverlayChipView extends View {
         super(context);
         this.host = host;
         this.engine = new TimerEngine(context);
-        surface.setColor(Color.argb(238, 18, 19, 17));
-        border.setColor(Color.argb(70, 216, 255, 106));
+
+        surface.setColor(Color.argb(246, 17, 19, 16));
+        border.setColor(Color.argb(180, 48, 52, 43));
         border.setStyle(Paint.Style.STROKE);
         border.setStrokeWidth(Ui.dp(context, 1));
+
         accent.setColor(Ui.ACCENT);
         accent.setStrokeCap(Paint.Cap.ROUND);
+        accentSoft.setColor(Color.argb(74, 216, 255, 106));
+        accentSoft.setStrokeCap(Paint.Cap.ROUND);
+
         time.setColor(Ui.TEXT);
         time.setTextAlign(Paint.Align.CENTER);
         time.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+
         meta.setColor(Ui.MUTED);
         meta.setTextAlign(Paint.Align.CENTER);
-        meta.setTypeface(Typeface.create("sans", Typeface.BOLD));
+        meta.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+
         glyph.setColor(Ui.TEXT);
-        glyph.setStrokeWidth(Ui.dp(context, 1.8f));
+        glyph.setStrokeWidth(Ui.dp(context, 1.7f));
         glyph.setStrokeCap(Paint.Cap.ROUND);
         glyph.setStyle(Paint.Style.STROKE);
     }
@@ -87,25 +95,30 @@ final class OverlayChipView extends View {
         long seconds = Math.max(0L, (s.remainingMillis + 999L) / 1000L);
         String clock = String.format(Locale.US, "%02d:%02d", seconds / 60L, seconds % 60L);
 
+        accent.setStrokeWidth(Ui.dp(getContext(), 2.4f));
+        canvas.drawLine(Ui.dp(getContext(), 13), Ui.dp(getContext(), 15), Ui.dp(getContext(), 13), getHeight() - Ui.dp(getContext(), 15), accent);
+
         if (!expanded) {
-            meta.setTextSize(Ui.dp(getContext(), 9));
+            meta.setTextSize(Ui.dp(getContext(), 8.5f));
             time.setTextSize(Ui.dp(getContext(), 19));
-            canvas.drawText(engine.phaseLabel(s.phase).replace(" BREAK", ""), Ui.dp(getContext(), 40), Ui.dp(getContext(), 22), meta);
-            canvas.drawText(clock, getWidth() * 0.62f, Ui.dp(getContext(), 36), time);
+            canvas.drawText(engine.phaseLabel(s.phase).replace(" BREAK", "").toUpperCase(Locale.US), Ui.dp(getContext(), 45), Ui.dp(getContext(), 22), meta);
+            canvas.drawText(clock, getWidth() * 0.63f, Ui.dp(getContext(), 36), time);
         } else {
             time.setTextSize(Ui.dp(getContext(), 18));
-            canvas.drawText(clock, Ui.dp(getContext(), 48), Ui.dp(getContext(), 35), time);
-            float zone = (getWidth() - Ui.dp(getContext(), 88)) / 3f;
+            canvas.drawText(clock, Ui.dp(getContext(), 50), Ui.dp(getContext(), 35), time);
+            float zone = (getWidth() - Ui.dp(getContext(), 92)) / 3f;
             drawPausePlay(canvas, Ui.dp(getContext(), 92) + zone * 0.5f, getHeight() / 2f, s.running);
             drawSkip(canvas, Ui.dp(getContext(), 92) + zone * 1.5f, getHeight() / 2f);
             drawClose(canvas, Ui.dp(getContext(), 92) + zone * 2.5f, getHeight() / 2f);
         }
 
         float fraction = Math.max(0f, Math.min(1f, (float) s.remainingMillis / Math.max(1f, engine.durationFor(s.phase))));
-        accent.setStrokeWidth(Ui.dp(getContext(), 2.2f));
-        float left = Ui.dp(getContext(), 18);
-        float right = getWidth() - Ui.dp(getContext(), 18);
+        float left = Ui.dp(getContext(), 23);
+        float right = getWidth() - Ui.dp(getContext(), 17);
         float y = getHeight() - Ui.dp(getContext(), 6);
+        accentSoft.setStrokeWidth(Ui.dp(getContext(), 2.2f));
+        canvas.drawLine(left, y, right, y, accentSoft);
+        accent.setStrokeWidth(Ui.dp(getContext(), 2.2f));
         canvas.drawLine(left, y, left + (right - left) * fraction, y, accent);
     }
 
