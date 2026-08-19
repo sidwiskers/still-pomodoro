@@ -139,7 +139,7 @@ final class OverlayChipView extends View {
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        float d = Ui.dp(getContext(), 1);
+        float d = getResources().getDisplayMetrics().density;
         float w = getWidth();
         float h = getHeight();
         float topSectionH = Math.min(h, 50f * d);
@@ -227,13 +227,12 @@ final class OverlayChipView extends View {
         drawSkip(canvas, x2, cy);
         drawClose(canvas, x3, cy);
 
-        Paint accentLine = orbitProgress;
         float underlineY = railBottom - 3.2f * d;
-        canvas.drawLine(x1 - 6f * d, underlineY, x1 + 6f * d, underlineY, accentLine);
+        canvas.drawLine(x1 - 6f * d, underlineY, x1 + 6f * d, underlineY, orbitProgress);
     }
 
     private void drawStillMark(Canvas canvas, float cx, float cy) {
-        float d = Ui.dp(getContext(), 1);
+        float d = getResources().getDisplayMetrics().density;
         markTop.reset();
         markTop.moveTo(cx - 5.2f * d, cy - 2.8f * d);
         markTop.cubicTo(cx - 2.8f * d, cy - 6.1f * d,
@@ -290,7 +289,7 @@ final class OverlayChipView extends View {
     }
 
     private void handleExpandedTap(float x, float y) {
-        float d = Ui.dp(getContext(), 1);
+        float d = getResources().getDisplayMetrics().density;
         if (y < 49f * d) {
             expanded = false;
             host.setExpanded(false);
