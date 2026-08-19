@@ -43,9 +43,8 @@ public final class MainActivity extends Activity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         engine = new TimerEngine(this);
-        NotificationHelper.ensureChannels(this);
-        configureWindow();
         setContentView(buildContent());
+        configureWindow();
     }
 
     @Override protected void onResume() {
@@ -282,13 +281,15 @@ public final class MainActivity extends Activity {
         getWindow().setNavigationBarColor(Ui.BG);
         if (Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController c = getWindow().getInsetsController();
+            View decor = getWindow().getDecorView();
+            WindowInsetsController c = decor.getWindowInsetsController();
             if (c != null) c.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+            decor.setOnApplyWindowInsetsListener((v, insets) -> {
                 android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
                 v.setPadding(0, bars.top, 0, bars.bottom);
                 return insets;
             });
+            decor.requestApplyInsets();
         }
     }
 
