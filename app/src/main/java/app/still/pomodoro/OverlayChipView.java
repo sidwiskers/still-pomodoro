@@ -48,7 +48,6 @@ final class OverlayChipView extends View {
         super(context);
         this.host = host;
         this.engine = new TimerEngine(context);
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);
         surface.setColor(Color.argb(238, 18, 19, 17));
         border.setColor(Color.argb(70, 216, 255, 106));
         border.setStyle(Paint.Style.STROKE);

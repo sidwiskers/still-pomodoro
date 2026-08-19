@@ -23,7 +23,6 @@ final class TimerDialView extends View {
 
     TimerDialView(Context context) {
         super(context);
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         track.setStyle(Paint.Style.STROKE);
         track.setStrokeCap(Paint.Cap.ROUND);
