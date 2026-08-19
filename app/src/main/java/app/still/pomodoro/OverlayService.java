@@ -15,6 +15,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class OverlayService extends Service implements OverlayChipView.Host {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
+    private static final int COLLAPSED_WIDTH_DP = 150;
+    private static final int EXPANDED_WIDTH_DP = 210;
+    private static final int HEIGHT_DP = 52;
+
     private WindowManager windowManager;
     private WindowManager.LayoutParams params;
     private OverlayChipView chip;
@@ -37,16 +41,16 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
 
         chip = new OverlayChipView(this, this);
         params = new WindowManager.LayoutParams(
-                Ui.dp(this, 178), Ui.dp(this, 58),
+                Ui.dp(this, COLLAPSED_WIDTH_DP), Ui.dp(this, HEIGHT_DP),
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
                 PixelFormat.TRANSLUCENT);
         params.gravity = Gravity.TOP | Gravity.START;
-        params.x = getResources().getDisplayMetrics().widthPixels - params.width - Ui.dp(this, 16);
-        params.y = Ui.dp(this, 112);
-        params.alpha = 0.97f;
+        params.x = getResources().getDisplayMetrics().widthPixels - params.width - Ui.dp(this, 14);
+        params.y = Ui.dp(this, 96);
+        params.alpha = 0.98f;
         windowManager.addView(chip, params);
 
         if (Build.VERSION.SDK_INT >= 34) {
@@ -97,7 +101,7 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
     @Override public void setExpanded(boolean expanded) {
         if (params == null || windowManager == null) return;
         int oldWidth = params.width;
-        params.width = Ui.dp(this, expanded ? 248 : 178);
+        params.width = Ui.dp(this, expanded ? EXPANDED_WIDTH_DP : COLLAPSED_WIDTH_DP);
         int screen = getResources().getDisplayMetrics().widthPixels;
         if (params.x > screen / 2) params.x -= params.width - oldWidth;
         params.x = Math.max(Ui.dp(this, 8), Math.min(screen - params.width - Ui.dp(this, 8), params.x));

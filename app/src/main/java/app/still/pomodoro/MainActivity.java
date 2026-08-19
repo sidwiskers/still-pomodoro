@@ -64,10 +64,12 @@ public final class MainActivity extends Activity {
     }
 
     private View buildContent() {
-        MaxWidthLinearLayout root = new MaxWidthLinearLayout(this, 620);
+        boolean tablet = isTablet();
+        MaxWidthLinearLayout root = new MaxWidthLinearLayout(this, tablet ? 720 : 620);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(Ui.dp(this, 22), Ui.dp(this, 30), Ui.dp(this, 22), Ui.dp(this, 22));
+        int horizontalPadding = Ui.dp(this, tablet ? 28 : 22);
+        root.setPadding(horizontalPadding, Ui.dp(this, tablet ? 36 : 30), horizontalPadding, Ui.dp(this, tablet ? 28 : 22));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.VERTICAL);
@@ -76,7 +78,7 @@ public final class MainActivity extends Activity {
         TextView brand = new TextView(this);
         brand.setText("Still");
         brand.setTextColor(Ui.TEXT);
-        brand.setTextSize(26f);
+        brand.setTextSize(tablet ? 28f : 26f);
         brand.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
         brand.setLetterSpacing(-0.01f);
         header.addView(brand, wrap());
@@ -84,7 +86,7 @@ public final class MainActivity extends Activity {
         TextView sub = new TextView(this);
         sub.setText("focus without the noise");
         sub.setTextColor(Ui.MUTED);
-        sub.setTextSize(11.5f);
+        sub.setTextSize(tablet ? 12f : 11.5f);
         sub.setLetterSpacing(0.035f);
         LinearLayout.LayoutParams subLp = wrap();
         subLp.topMargin = Ui.dp(this, 3);
@@ -92,7 +94,7 @@ public final class MainActivity extends Activity {
 
         View accentRule = new View(this);
         accentRule.setBackground(Ui.roundRect(Ui.ACCENT, 2f, this));
-        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 3));
+        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(Ui.dp(this, tablet ? 26 : 22), Ui.dp(this, 3));
         ruleLp.topMargin = Ui.dp(this, 13);
         header.addView(accentRule, ruleLp);
 
@@ -101,8 +103,8 @@ public final class MainActivity extends Activity {
         FrameLayout dialCard = new FrameLayout(this);
         dialCard.setBackground(Ui.panel(this, 34f));
         dialCard.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
-        LinearLayout.LayoutParams dialCardLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 332));
-        dialCardLp.topMargin = Ui.dp(this, 20);
+        LinearLayout.LayoutParams dialCardLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, tablet ? 360 : 332));
+        dialCardLp.topMargin = Ui.dp(this, tablet ? 24 : 20);
         root.addView(dialCard, dialCardLp);
 
         dial = new TimerDialView(this);
@@ -111,7 +113,7 @@ public final class MainActivity extends Activity {
         cycle = new TextView(this);
         cycle.setText("SESSION 1 / 4");
         cycle.setTextColor(Ui.MUTED);
-        cycle.setTextSize(10.5f);
+        cycle.setTextSize(tablet ? 11f : 10.5f);
         cycle.setGravity(Gravity.CENTER);
         cycle.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
         cycle.setLetterSpacing(0.105f);
@@ -133,7 +135,7 @@ public final class MainActivity extends Activity {
             if (s.running) engine.pause(); else engine.start();
             render();
         });
-        controls.addView(primary, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 1f));
+        controls.addView(primary, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 52 : 50), 1f));
 
         Space gap = new Space(this);
         controls.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
@@ -144,7 +146,7 @@ public final class MainActivity extends Activity {
             engine.resetCurrent();
             render();
         });
-        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 0.58f));
+        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 52 : 50), 0.58f));
         root.addView(controls, controlsLp);
 
         LinearLayout features = new LinearLayout(this);
@@ -158,7 +160,7 @@ public final class MainActivity extends Activity {
             Ui.feedback(v);
             toggleOverlay();
         });
-        features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
 
         Space g2 = new Space(this);
         features.addView(g2, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
@@ -168,7 +170,7 @@ public final class MainActivity extends Activity {
             Ui.feedback(v);
             startActivity(new Intent(this, LowPowerActivity.class));
         });
-        features.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        features.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
 
         Space g3 = new Space(this);
         features.addView(g3, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
@@ -178,7 +180,7 @@ public final class MainActivity extends Activity {
             Ui.feedback(v);
             showSettings();
         });
-        features.addView(timing, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        features.addView(timing, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
         root.addView(features, featuresLp);
 
         ScrollView scroll = new ScrollView(this);
@@ -186,7 +188,9 @@ public final class MainActivity extends Activity {
         scroll.setClipToPadding(false);
         scroll.setBackgroundColor(Ui.BG);
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        scroll.addView(root, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        ScrollView.LayoutParams rootLp = new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rootLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+        scroll.addView(root, rootLp);
 
         FrameLayout shell = new FrameLayout(this);
         shell.setBackgroundColor(Ui.BG);
@@ -309,6 +313,10 @@ public final class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4001);
         }
+    }
+
+    private boolean isTablet() {
+        return getResources().getConfiguration().smallestScreenWidthDp >= 600;
     }
 
     private void configureWindow() {
