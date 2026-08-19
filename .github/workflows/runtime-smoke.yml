@@ -62,14 +62,14 @@ jobs:
           disable-animations: true
           script: |
             adb install -r app/build/outputs/apk/release/app-release.apk
-            adb logcat -c
+            adb logcat -c || true
             adb shell am force-stop app.still.pomodoro
             set +e
             adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity
             START_STATUS=$?
             sleep 5
-            adb logcat -d > runtime-logcat.txt
-            cat runtime-logcat.txt
+            adb logcat -d > runtime-logcat.txt || true
+            cat runtime-logcat.txt || true
             set -e
             if grep -A 100 -B 15 -E 'FATAL EXCEPTION|Process: app\.still\.pomodoro' runtime-logcat.txt; then
               exit 1
