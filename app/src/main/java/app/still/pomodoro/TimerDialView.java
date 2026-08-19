@@ -19,7 +19,9 @@ final class TimerDialView extends View {
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint halo = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint progress = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint markerGlow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint marker = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint markerCut = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ticks = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint time = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint phase = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -34,7 +36,6 @@ final class TimerDialView extends View {
 
     TimerDialView(Context context) {
         super(context);
-        setLayerType(View.LAYER_TYPE_SOFTWARE, null);
 
         disc.setColor(Ui.SURFACE);
 
@@ -54,9 +55,12 @@ final class TimerDialView extends View {
         progress.setStrokeCap(Paint.Cap.ROUND);
         progress.setColor(Ui.ACCENT);
 
+        markerGlow.setStyle(Paint.Style.FILL);
+        markerGlow.setColor(Color.argb(42, 216, 255, 106));
         marker.setStyle(Paint.Style.FILL);
         marker.setColor(Ui.ACCENT);
-        marker.setShadowLayer(Ui.dp(context, 10), 0, 0, Color.argb(90, 216, 255, 106));
+        markerCut.setStyle(Paint.Style.FILL);
+        markerCut.setColor(Color.rgb(20, 22, 18));
 
         ticks.setStyle(Paint.Style.STROKE);
         ticks.setStrokeCap(Paint.Cap.ROUND);
@@ -150,10 +154,9 @@ final class TimerDialView extends View {
         float x = cx + (float) Math.cos(rad) * radius;
         float y = cy + (float) Math.sin(rad) * radius;
         float dot = Math.max(Ui.dp(getContext(), 4.2f), stroke * 0.54f);
+        canvas.drawCircle(x, y, dot * 2.2f, markerGlow);
         canvas.drawCircle(x, y, dot, marker);
-        Paint cut = new Paint(Paint.ANTI_ALIAS_FLAG);
-        cut.setColor(Color.rgb(20, 22, 18));
-        canvas.drawCircle(x, y, Math.max(Ui.dp(getContext(), 1.4f), dot * 0.30f), cut);
+        canvas.drawCircle(x, y, Math.max(Ui.dp(getContext(), 1.4f), dot * 0.30f), markerCut);
     }
 
     private void drawSessionDots(Canvas canvas, float cx, float y, int count, int current) {
