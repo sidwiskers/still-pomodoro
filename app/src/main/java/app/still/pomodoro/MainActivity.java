@@ -20,7 +20,6 @@ import android.view.WindowInsetsController;
 import android.widget.CheckBox;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.NumberPicker;
 import android.widget.ScrollView;
 import android.widget.Space;
 import android.widget.TextView;
@@ -211,10 +210,10 @@ public final class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(Ui.dp(this, 18), Ui.dp(this, 5), Ui.dp(this, 18), Ui.dp(this, 10));
 
-        NumberPicker focus = picker(1, 180, engine.focusMinutes());
-        NumberPicker shortBreak = picker(1, 60, engine.shortMinutes());
-        NumberPicker longBreak = picker(1, 120, engine.longMinutes());
-        NumberPicker cycles = picker(1, 12, engine.cycleSize());
+        WheelPickerView focus = picker(1, 180, engine.focusMinutes());
+        WheelPickerView shortBreak = picker(1, 60, engine.shortMinutes());
+        WheelPickerView longBreak = picker(1, 120, engine.longMinutes());
+        WheelPickerView cycles = picker(1, 12, engine.cycleSize());
         content.addView(settingRow("Focus minutes", focus), rowParams());
         content.addView(settingRow("Short break", shortBreak), rowParams());
         content.addView(settingRow("Long break", longBreak), rowParams());
@@ -249,7 +248,7 @@ public final class MainActivity extends Activity {
         dialog.show();
     }
 
-    private View settingRow(String title, NumberPicker picker) {
+    private View settingRow(String title, WheelPickerView picker) {
         LinearLayout row = new LinearLayout(this);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(Ui.dp(this, 14), 0, Ui.dp(this, 8), 0);
@@ -258,9 +257,10 @@ public final class MainActivity extends Activity {
         label.setText(title);
         label.setTextColor(Ui.TEXT);
         label.setTextSize(13f);
+        label.setGravity(Gravity.CENTER_VERTICAL);
         label.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
-        row.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 62), 1f));
-        row.addView(picker, new LinearLayout.LayoutParams(Ui.dp(this, 92), Ui.dp(this, 62)));
+        row.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 72), 1f));
+        row.addView(picker, new LinearLayout.LayoutParams(Ui.dp(this, 96), Ui.dp(this, 72)));
         return row;
     }
 
@@ -270,13 +270,8 @@ public final class MainActivity extends Activity {
         return lp;
     }
 
-    private NumberPicker picker(int min, int max, int value) {
-        NumberPicker picker = new NumberPicker(this);
-        picker.setMinValue(min);
-        picker.setMaxValue(max);
-        picker.setValue(value);
-        picker.setWrapSelectorWheel(false);
-        return picker;
+    private WheelPickerView picker(int min, int max, int value) {
+        return new WheelPickerView(this, min, max, value);
     }
 
     private CheckBox check(String text, boolean checked) {
