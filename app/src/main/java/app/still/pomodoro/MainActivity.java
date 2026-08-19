@@ -67,7 +67,7 @@ public final class MainActivity extends Activity {
         MaxWidthLinearLayout root = new MaxWidthLinearLayout(this, 620);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        root.setPadding(Ui.dp(this, 22), Ui.dp(this, 30), Ui.dp(this, 22), Ui.dp(this, 28));
+        root.setPadding(Ui.dp(this, 22), Ui.dp(this, 30), Ui.dp(this, 22), Ui.dp(this, 22));
 
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.VERTICAL);
@@ -92,7 +92,7 @@ public final class MainActivity extends Activity {
 
         View accentRule = new View(this);
         accentRule.setBackground(Ui.roundRect(Ui.ACCENT, 2f, this));
-        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(Ui.dp(this, 34), Ui.dp(this, 3));
+        LinearLayout.LayoutParams ruleLp = new LinearLayout.LayoutParams(Ui.dp(this, 22), Ui.dp(this, 3));
         ruleLp.topMargin = Ui.dp(this, 13);
         header.addView(accentRule, ruleLp);
 
@@ -101,23 +101,29 @@ public final class MainActivity extends Activity {
         FrameLayout dialCard = new FrameLayout(this);
         dialCard.setBackground(Ui.panel(this, 34f));
         dialCard.setPadding(Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4), Ui.dp(this, 4));
-        LinearLayout.LayoutParams dialCardLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 346));
-        dialCardLp.topMargin = Ui.dp(this, 22);
+        LinearLayout.LayoutParams dialCardLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 332));
+        dialCardLp.topMargin = Ui.dp(this, 20);
         root.addView(dialCard, dialCardLp);
 
         dial = new TimerDialView(this);
         dialCard.addView(dial, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        cycle = Ui.tag(this, "SESSION 1 / 4");
+        cycle = new TextView(this);
+        cycle.setText("SESSION 1 / 4");
+        cycle.setTextColor(Ui.MUTED);
+        cycle.setTextSize(10.5f);
+        cycle.setGravity(Gravity.CENTER);
+        cycle.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+        cycle.setLetterSpacing(0.105f);
         LinearLayout.LayoutParams cycleLp = wrap();
-        cycleLp.topMargin = Ui.dp(this, 13);
+        cycleLp.topMargin = Ui.dp(this, 12);
         root.addView(cycle, cycleLp);
 
         LinearLayout controls = new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams controlsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        controlsLp.topMargin = Ui.dp(this, 15);
+        controlsLp.topMargin = Ui.dp(this, 14);
 
         primary = Ui.pill(this, "Start", true);
         primary.setOnClickListener(v -> {
@@ -127,7 +133,7 @@ public final class MainActivity extends Activity {
             if (s.running) engine.pause(); else engine.start();
             render();
         });
-        controls.addView(primary, new LinearLayout.LayoutParams(0, Ui.dp(this, 52), 1f));
+        controls.addView(primary, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 1f));
 
         Space gap = new Space(this);
         controls.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
@@ -138,52 +144,42 @@ public final class MainActivity extends Activity {
             engine.resetCurrent();
             render();
         });
-        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, 52), 0.58f));
+        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 0.58f));
         root.addView(controls, controlsLp);
 
         LinearLayout features = new LinearLayout(this);
         features.setOrientation(LinearLayout.HORIZONTAL);
         features.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams featuresLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        featuresLp.topMargin = Ui.dp(this, 10);
+        featuresLp.topMargin = Ui.dp(this, 9);
 
-        TextView overlay = Ui.tile(this, "Float");
+        TextView overlay = Ui.segmentTile(this, "Float", 0);
         overlay.setOnClickListener(v -> {
             Ui.feedback(v);
             toggleOverlay();
         });
-        features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
+        features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
 
         Space g2 = new Space(this);
-        features.addView(g2, new LinearLayout.LayoutParams(Ui.dp(this, 8), 1));
+        features.addView(g2, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
 
-        TextView lowPower = Ui.tile(this, "Low power");
+        TextView lowPower = Ui.segmentTile(this, "Low power", 1);
         lowPower.setOnClickListener(v -> {
             Ui.feedback(v);
             startActivity(new Intent(this, LowPowerActivity.class));
         });
-        features.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
+        features.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
 
         Space g3 = new Space(this);
-        features.addView(g3, new LinearLayout.LayoutParams(Ui.dp(this, 8), 1));
+        features.addView(g3, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
 
-        TextView timing = Ui.tile(this, "Timing");
+        TextView timing = Ui.segmentTile(this, "Timing", 2);
         timing.setOnClickListener(v -> {
             Ui.feedback(v);
             showSettings();
         });
-        features.addView(timing, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
+        features.addView(timing, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
         root.addView(features, featuresLp);
-
-        TextView foot = new TextView(this);
-        foot.setText("one thing at a time");
-        foot.setTextColor(Ui.MUTED_2);
-        foot.setTextSize(10f);
-        foot.setLetterSpacing(0.055f);
-        foot.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams footLp = wrap();
-        footLp.topMargin = Ui.dp(this, 18);
-        root.addView(foot, footLp);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);
