@@ -74,7 +74,9 @@ jobs:
             grep -q 'Status: ok' start-output.txt
             sleep 5
             adb logcat -d > runtime-logcat.txt || true
-            ! grep -qE 'FATAL EXCEPTION|Process: app\.still\.pomodoro' runtime-logcat.txt
+            ! grep -q 'Process: app.still.pomodoro' runtime-logcat.txt
+            adb shell pidof app.still.pomodoro | tee process-state.txt
+            test -s process-state.txt
             adb shell dumpsys activity activities > activity-state.txt
             grep -q 'app.still.pomodoro/.MainActivity' activity-state.txt
 
@@ -86,5 +88,6 @@ jobs:
           path: |
             start-output.txt
             runtime-logcat.txt
+            process-state.txt
             activity-state.txt
           if-no-files-found: ignore
