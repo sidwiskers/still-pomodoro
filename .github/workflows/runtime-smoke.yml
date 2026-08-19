@@ -79,6 +79,8 @@ jobs:
             test -s process-state.txt
             adb shell dumpsys activity activities > activity-state.txt
             grep -q 'app.still.pomodoro/.MainActivity' activity-state.txt
+            adb exec-out screencap -p > still-home.png
+            test -s still-home.png
 
       - name: Upload diagnostics
         if: always()
@@ -90,4 +92,5 @@ jobs:
             runtime-logcat.txt
             process-state.txt
             activity-state.txt
+            still-home.png
           if-no-files-found: ignore
