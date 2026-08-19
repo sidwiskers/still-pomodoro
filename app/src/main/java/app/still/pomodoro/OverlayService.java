@@ -10,19 +10,22 @@ import android.os.IBinder;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.WindowManager;
+import android.view.animation.DecelerateInterpolator;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class OverlayService extends Service implements OverlayChipView.Host {
     private static final AtomicBoolean RUNNING = new AtomicBoolean(false);
-    private static final int COLLAPSED_WIDTH_DP = 126;
-    private static final int EXPANDED_WIDTH_DP = 186;
-    private static final int HEIGHT_DP = 46;
+    private static final int COLLAPSED_WIDTH_DP = 132;
+    private static final int COLLAPSED_HEIGHT_DP = 50;
+    private static final int EXPANDED_WIDTH_DP = 158;
+    private static final int EXPANDED_HEIGHT_DP = 82;
 
     private WindowManager windowManager;
     private WindowManager.LayoutParams params;
     private OverlayChipView chip;
     private ValueAnimator snapAnimator;
+    private ValueAnimator sizeAnimator;
 
     static boolean isRunning() { return RUNNING.get(); }
 
@@ -41,7 +44,7 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
 
         chip = new OverlayChipView(this, this);
         params = new WindowManager.LayoutParams(
-                Ui.dp(this, COLLAPSED_WIDTH_DP), Ui.dp(this, HEIGHT_DP),
+                Ui.dp(this, COLLAPSED_WIDTH_DP), Ui.dp(this, COLLAPSED_HEIGHT_DP),
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
@@ -67,6 +70,7 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
     @Override public void onDestroy() {
         RUNNING.set(false);
         if (snapAnimator != null) snapAnimator.cancel();
+        if (sizeAnimator != null) sizeAnimator.cancel();
         if (chip != null && windowManager != null) {
             try { windowManager.removeView(chip); } catch (IllegalArgumentException ignored) {}
         }
@@ -78,19 +82,23 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
 
     @Override public void moveBy(int dx, int dy) {
         if (params == null || windowManager == null) return;
+        if (sizeAnimator != null && sizeAnimator.isRunning()) sizeAnimator.cancel();
         params.x += dx;
         params.y += dy;
-        clampY();
+        clampBounds();
         windowManager.updateViewLayout(chip, params);
     }
 
     @Override public void snapToEdge() {
         if (params == null || windowManager == null) return;
         int screen = getResources().getDisplayMetrics().widthPixels;
-        int target = params.x + params.width / 2 < screen / 2 ? Ui.dp(this, 9) : screen - params.width - Ui.dp(this, 9);
+        int target = params.x + params.width / 2 < screen / 2
+                ? Ui.dp(this, 9)
+                : screen - params.width - Ui.dp(this, 9);
         if (snapAnimator != null) snapAnimator.cancel();
         snapAnimator = ValueAnimator.ofInt(params.x, target);
         snapAnimator.setDuration(160L);
+        snapAnimator.setInterpolator(new DecelerateInterpolator());
         snapAnimator.addUpdateListener(a -> {
             params.x = (int) a.getAnimatedValue();
             try { windowManager.updateViewLayout(chip, params); } catch (IllegalArgumentException ignored) {}
@@ -100,18 +108,43 @@ public final class OverlayService extends Service implements OverlayChipView.Hos
 
     @Override public void setExpanded(boolean expanded) {
         if (params == null || windowManager == null) return;
-        int oldWidth = params.width;
-        params.width = Ui.dp(this, expanded ? EXPANDED_WIDTH_DP : COLLAPSED_WIDTH_DP);
-        int screen = getResources().getDisplayMetrics().widthPixels;
-        if (params.x > screen / 2) params.x -= params.width - oldWidth;
-        params.x = Math.max(Ui.dp(this, 8), Math.min(screen - params.width - Ui.dp(this, 8), params.x));
-        windowManager.updateViewLayout(chip, params);
+        if (sizeAnimator != null) sizeAnimator.cancel();
+
+        int startW = params.width;
+        int startH = params.height;
+        int targetW = Ui.dp(this, expanded ? EXPANDED_WIDTH_DP : COLLAPSED_WIDTH_DP);
+        int targetH = Ui.dp(this, expanded ? EXPANDED_HEIGHT_DP : COLLAPSED_HEIGHT_DP);
+        if (startW == targetW && startH == targetH) return;
+
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        boolean rightAnchored = params.x + startW / 2 > screenW / 2;
+        int anchorRight = params.x + startW;
+        int anchorX = params.x;
+        int anchorCenterY = params.y + startH / 2;
+
+        sizeAnimator = ValueAnimator.ofFloat(0f, 1f);
+        sizeAnimator.setDuration(190L);
+        sizeAnimator.setInterpolator(new DecelerateInterpolator());
+        sizeAnimator.addUpdateListener(a -> {
+            float t = (float) a.getAnimatedValue();
+            params.width = Math.round(startW + (targetW - startW) * t);
+            params.height = Math.round(startH + (targetH - startH) * t);
+            params.x = rightAnchored ? anchorRight - params.width : anchorX;
+            params.y = anchorCenterY - params.height / 2;
+            clampBounds();
+            try { windowManager.updateViewLayout(chip, params); } catch (IllegalArgumentException ignored) {}
+        });
+        sizeAnimator.start();
     }
 
     @Override public void closeOverlay() { stopSelf(); }
 
-    private void clampY() {
-        int screen = getResources().getDisplayMetrics().heightPixels;
-        params.y = Math.max(Ui.dp(this, 22), Math.min(screen - params.height - Ui.dp(this, 22), params.y));
+    private void clampBounds() {
+        int screenW = getResources().getDisplayMetrics().widthPixels;
+        int screenH = getResources().getDisplayMetrics().heightPixels;
+        int side = Ui.dp(this, 8);
+        int vertical = Ui.dp(this, 22);
+        params.x = Math.max(side, Math.min(screenW - params.width - side, params.x));
+        params.y = Math.max(vertical, Math.min(screenH - params.height - vertical, params.y));
     }
 }

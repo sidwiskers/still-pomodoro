@@ -25,19 +25,33 @@ final class OverlayChipView extends View {
     private final Host host;
     private final TimerEngine engine;
     private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Paint shadow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint surface = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint surfaceInset = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint lobe = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint border = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rim = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint orbitTrack = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint orbitProgress = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint accent = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint accentSoft = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ivory = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint time = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint meta = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glyph = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint controlFill = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final RectF rect = new RectF();
+    private final Paint controlRail = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint controlActive = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint divider = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint status = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    private final RectF bodyRect = new RectF();
+    private final RectF insetRect = new RectF();
+    private final RectF orbitRect = new RectF();
+    private final RectF railRect = new RectF();
+    private final RectF activeRect = new RectF();
     private final Path markTop = new Path();
     private final Path markBottom = new Path();
+
     private boolean expanded;
     private float downRawX, downRawY, lastRawX, lastRawY;
     private boolean dragging;
@@ -56,37 +70,60 @@ final class OverlayChipView extends View {
         this.host = host;
         this.engine = new TimerEngine(context);
 
-        surface.setColor(Color.argb(250, 15, 17, 14));
-        lobe.setColor(Color.argb(255, 24, 27, 22));
-        border.setColor(Color.argb(190, 52, 56, 47));
+        shadow.setColor(Color.argb(76, 0, 0, 0));
+        surface.setColor(Color.argb(252, 13, 15, 12));
+        surfaceInset.setColor(Color.argb(255, 18, 21, 17));
+        lobe.setColor(Color.argb(255, 21, 24, 19));
+
+        border.setColor(Color.argb(205, 54, 60, 49));
         border.setStyle(Paint.Style.STROKE);
-        border.setStrokeWidth(Ui.dp(context, 1));
+        border.setStrokeWidth(Ui.dp(context, 0.9f));
+
+        rim.setColor(Color.argb(28, 243, 240, 232));
+        rim.setStyle(Paint.Style.STROKE);
+        rim.setStrokeWidth(Ui.dp(context, 0.75f));
+        rim.setStrokeCap(Paint.Cap.ROUND);
+
+        orbitTrack.setColor(Color.argb(66, 216, 255, 106));
+        orbitTrack.setStyle(Paint.Style.STROKE);
+        orbitTrack.setStrokeWidth(Ui.dp(context, 1.65f));
+        orbitTrack.setStrokeCap(Paint.Cap.ROUND);
+
+        orbitProgress.setColor(Ui.ACCENT);
+        orbitProgress.setStyle(Paint.Style.STROKE);
+        orbitProgress.setStrokeWidth(Ui.dp(context, 2.05f));
+        orbitProgress.setStrokeCap(Paint.Cap.ROUND);
 
         accent.setColor(Ui.ACCENT);
         accent.setStyle(Paint.Style.STROKE);
         accent.setStrokeCap(Paint.Cap.ROUND);
-        accent.setStrokeWidth(Ui.dp(context, 1.7f));
-        accentSoft.setColor(Color.argb(52, 216, 255, 106));
-        accentSoft.setStrokeCap(Paint.Cap.ROUND);
+        accent.setStrokeWidth(Ui.dp(context, 1.65f));
+
         ivory.setColor(Ui.TEXT);
         ivory.setStyle(Paint.Style.STROKE);
         ivory.setStrokeCap(Paint.Cap.ROUND);
-        ivory.setStrokeWidth(Ui.dp(context, 1.7f));
+        ivory.setStrokeWidth(Ui.dp(context, 1.65f));
 
         time.setColor(Ui.TEXT);
-        time.setTextAlign(Paint.Align.CENTER);
+        time.setTextAlign(Paint.Align.LEFT);
         time.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
 
         meta.setColor(Ui.MUTED);
-        meta.setTextAlign(Paint.Align.CENTER);
+        meta.setTextAlign(Paint.Align.LEFT);
         meta.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
 
         glyph.setColor(Ui.TEXT);
-        glyph.setStrokeWidth(Ui.dp(context, 1.55f));
+        glyph.setStrokeWidth(Ui.dp(context, 1.45f));
         glyph.setStrokeCap(Paint.Cap.ROUND);
         glyph.setStyle(Paint.Style.STROKE);
 
-        controlFill.setColor(Color.argb(66, 63, 67, 57));
+        controlRail.setColor(Color.argb(116, 25, 29, 23));
+        controlActive.setColor(Color.argb(48, 216, 255, 106));
+
+        divider.setColor(Color.argb(72, 78, 84, 69));
+        divider.setStrokeWidth(Ui.dp(context, 0.8f));
+
+        status.setStyle(Paint.Style.FILL);
     }
 
     @Override protected void onAttachedToWindow() {
@@ -101,66 +138,115 @@ final class OverlayChipView extends View {
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float h = getHeight();
-        float cy = h / 2f;
-        float bodyLeft = Ui.dp(getContext(), 14);
-        float radius = Ui.dp(getContext(), 15);
-        rect.set(bodyLeft, Ui.dp(getContext(), 1), getWidth() - Ui.dp(getContext(), 1), h - Ui.dp(getContext(), 1));
-        canvas.drawRoundRect(rect, radius, radius, surface);
-        canvas.drawRoundRect(rect, radius, radius, border);
 
-        float lobeX = Ui.dp(getContext(), 18);
-        float lobeR = Ui.dp(getContext(), 15);
-        canvas.drawCircle(lobeX, cy, lobeR, lobe);
-        canvas.drawCircle(lobeX, cy, lobeR, border);
-        drawStillMark(canvas, lobeX, cy);
+        float d = getResources().getDisplayMetrics().density;
+        float w = getWidth();
+        float h = getHeight();
+        float topSectionH = Math.min(h, 50f * d);
+        float bodyLeft = 14f * d;
+        float bodyRadius = 17f * d;
+
+        bodyRect.set(bodyLeft, 2f * d, w - 2f * d, h - 2f * d);
+        RectF shadowRect = new RectF(bodyRect);
+        shadowRect.offset(0, 2.2f * d);
+        canvas.drawRoundRect(shadowRect, bodyRadius, bodyRadius, shadow);
+        canvas.drawRoundRect(bodyRect, bodyRadius, bodyRadius, surface);
+        canvas.drawRoundRect(bodyRect, bodyRadius, bodyRadius, border);
+
+        insetRect.set(bodyLeft + 2f * d, 4f * d, w - 4f * d, topSectionH - 3f * d);
+        canvas.drawRoundRect(insetRect, 14.5f * d, 14.5f * d, surfaceInset);
+        canvas.drawLine(43f * d, 6.5f * d, w - 16f * d, 6.5f * d, rim);
+
+        float lobeX = 21f * d;
+        float lobeY = 25f * d;
+        float lobeR = 18f * d;
+        canvas.drawCircle(lobeX, lobeY + 1.6f * d, lobeR, shadow);
+        canvas.drawCircle(lobeX, lobeY, lobeR, lobe);
+        canvas.drawCircle(lobeX, lobeY, lobeR, border);
 
         TimerState s = engine.snapshot();
         long seconds = Math.max(0L, (s.remainingMillis + 999L) / 1000L);
         String clock = String.format(Locale.US, "%02d:%02d", seconds / 60L, seconds % 60L);
+        float fraction = Math.max(0f, Math.min(1f,
+                (float) s.remainingMillis / Math.max(1f, engine.durationFor(s.phase))));
 
-        if (!expanded) {
-            meta.setTextSize(Ui.dp(getContext(), 6.8f));
-            time.setTextSize(Ui.dp(getContext(), 17f));
-            String phase = engine.phaseLabel(s.phase).replace(" BREAK", "").toUpperCase(Locale.US);
-            canvas.drawText(phase, Ui.dp(getContext(), 53), Ui.dp(getContext(), 15), meta);
-            canvas.drawText(clock, Ui.dp(getContext(), 82), Ui.dp(getContext(), 33), time);
+        float orbitR = 14.6f * d;
+        orbitRect.set(lobeX - orbitR, lobeY - orbitR, lobeX + orbitR, lobeY + orbitR);
+        canvas.drawArc(orbitRect, 135f, 270f, false, orbitTrack);
+        if (fraction > 0.002f) canvas.drawArc(orbitRect, 135f, 270f * fraction, false, orbitProgress);
+        drawStillMark(canvas, lobeX, lobeY);
+
+        float textX = 45f * d;
+        meta.setTextSize(6.6f * d);
+        time.setTextSize(17.8f * d);
+        String phase = engine.phaseLabel(s.phase).replace(" BREAK", "").toUpperCase(Locale.US);
+        canvas.drawText(phase, textX, 17f * d, meta);
+        canvas.drawText(clock, textX, 36f * d, time);
+
+        float statusX = w - 13f * d;
+        float statusY = 14f * d;
+        if (s.running) {
+            status.setColor(Ui.ACCENT);
+            canvas.drawCircle(statusX, statusY, 2.1f * d, status);
+            status.setColor(Color.argb(36, 216, 255, 106));
+            canvas.drawCircle(statusX, statusY, 4.4f * d, status);
         } else {
-            time.setTextSize(Ui.dp(getContext(), 15.5f));
-            canvas.drawText(clock, Ui.dp(getContext(), 51), Ui.dp(getContext(), 29), time);
-            float start = Ui.dp(getContext(), 80);
-            float zone = (getWidth() - start - Ui.dp(getContext(), 3)) / 3f;
-            for (int i = 0; i < 3; i++) {
-                float x = start + zone * (i + 0.5f);
-                canvas.drawCircle(x, cy, Ui.dp(getContext(), 10.2f), controlFill);
-            }
-            drawPausePlay(canvas, start + zone * 0.5f, cy, s.running);
-            drawSkip(canvas, start + zone * 1.5f, cy);
-            drawClose(canvas, start + zone * 2.5f, cy);
+            status.setColor(Color.argb(130, 118, 124, 106));
+            canvas.drawCircle(statusX, statusY, 1.7f * d, status);
         }
 
-        float fraction = Math.max(0f, Math.min(1f, (float) s.remainingMillis / Math.max(1f, engine.durationFor(s.phase))));
-        float left = Ui.dp(getContext(), 38);
-        float right = getWidth() - Ui.dp(getContext(), 8);
-        float y = h - Ui.dp(getContext(), 4);
-        accentSoft.setStrokeWidth(Ui.dp(getContext(), 1.5f));
-        canvas.drawLine(left, y, right, y, accentSoft);
-        accent.setStrokeWidth(Ui.dp(getContext(), 1.5f));
-        canvas.drawLine(left, y, left + (right - left) * fraction, y, accent);
+        if (expanded && h > 58f * d) drawControlDeck(canvas, s, d, w, h);
+    }
+
+    private void drawControlDeck(Canvas canvas, TimerState s, float d, float w, float h) {
+        float railTop = 52f * d;
+        float railBottom = h - 8f * d;
+        float railLeft = 32f * d;
+        float railRight = w - 9f * d;
+        if (railBottom <= railTop + 8f * d) return;
+
+        railRect.set(railLeft, railTop, railRight, railBottom);
+        canvas.drawRoundRect(railRect, 11f * d, 11f * d, controlRail);
+
+        float zone = (railRight - railLeft) / 3f;
+        activeRect.set(railLeft + 3f * d, railTop + 3f * d,
+                railLeft + zone - 3f * d, railBottom - 3f * d);
+        canvas.drawRoundRect(activeRect, 8f * d, 8f * d, controlActive);
+
+        float cy = (railTop + railBottom) / 2f;
+        float x1 = railLeft + zone * 0.5f;
+        float x2 = railLeft + zone * 1.5f;
+        float x3 = railLeft + zone * 2.5f;
+
+        canvas.drawLine(railLeft + zone, railTop + 7f * d,
+                railLeft + zone, railBottom - 7f * d, divider);
+        canvas.drawLine(railLeft + zone * 2f, railTop + 7f * d,
+                railLeft + zone * 2f, railBottom - 7f * d, divider);
+
+        drawPausePlay(canvas, x1, cy, s.running);
+        drawSkip(canvas, x2, cy);
+        drawClose(canvas, x3, cy);
+
+        float underlineY = railBottom - 3.2f * d;
+        canvas.drawLine(x1 - 6f * d, underlineY, x1 + 6f * d, underlineY, orbitProgress);
     }
 
     private void drawStillMark(Canvas canvas, float cx, float cy) {
-        float d = Ui.dp(getContext(), 1);
+        float d = getResources().getDisplayMetrics().density;
         markTop.reset();
-        markTop.moveTo(cx - 6 * d, cy - 3 * d);
-        markTop.cubicTo(cx - 3 * d, cy - 7 * d, cx + 4 * d, cy - 7 * d, cx + 6 * d, cy - 3 * d);
-        markTop.cubicTo(cx + 7 * d, cy - 1 * d, cx + 3 * d, cy, cx, cy + 1 * d);
+        markTop.moveTo(cx - 5.2f * d, cy - 2.8f * d);
+        markTop.cubicTo(cx - 2.8f * d, cy - 6.1f * d,
+                cx + 3.4f * d, cy - 6.2f * d, cx + 5.2f * d, cy - 2.9f * d);
+        markTop.cubicTo(cx + 6.2f * d, cy - 1.0f * d,
+                cx + 2.8f * d, cy - 0.1f * d, cx, cy + 0.8f * d);
         canvas.drawPath(markTop, ivory);
 
         markBottom.reset();
-        markBottom.moveTo(cx, cy + 1 * d);
-        markBottom.cubicTo(cx - 4 * d, cy + 2 * d, cx - 7 * d, cy + 3 * d, cx - 6 * d, cy + 6 * d);
-        markBottom.cubicTo(cx - 3 * d, cy + 9 * d, cx + 4 * d, cy + 8 * d, cx + 7 * d, cy + 4 * d);
+        markBottom.moveTo(cx, cy + 0.8f * d);
+        markBottom.cubicTo(cx - 3.4f * d, cy + 1.8f * d,
+                cx - 5.9f * d, cy + 2.8f * d, cx - 5.0f * d, cy + 5.2f * d);
+        markBottom.cubicTo(cx - 2.4f * d, cy + 7.5f * d,
+                cx + 3.8f * d, cy + 6.8f * d, cx + 5.8f * d, cy + 3.5f * d);
         canvas.drawPath(markBottom, accent);
     }
 
@@ -193,7 +279,7 @@ final class OverlayChipView extends View {
                     expanded = true;
                     host.setExpanded(true);
                 } else {
-                    handleExpandedTap(event.getX());
+                    handleExpandedTap(event.getX(), event.getY());
                 }
                 invalidate();
                 return true;
@@ -202,15 +288,24 @@ final class OverlayChipView extends View {
         }
     }
 
-    private void handleExpandedTap(float x) {
-        float start = Ui.dp(getContext(), 80);
-        if (x < start) {
+    private void handleExpandedTap(float x, float y) {
+        float d = getResources().getDisplayMetrics().density;
+        if (y < 49f * d) {
             expanded = false;
             host.setExpanded(false);
             return;
         }
-        float zone = (getWidth() - start - Ui.dp(getContext(), 3)) / 3f;
-        int index = Math.min(2, Math.max(0, (int)((x - start) / zone)));
+
+        float railLeft = 32f * d;
+        float railRight = getWidth() - 9f * d;
+        if (x < railLeft || x > railRight) {
+            expanded = false;
+            host.setExpanded(false);
+            return;
+        }
+
+        float zone = (railRight - railLeft) / 3f;
+        int index = Math.min(2, Math.max(0, (int) ((x - railLeft) / zone)));
         if (index == 0) {
             TimerState s = engine.snapshot();
             if (s.running) engine.pause(); else engine.start();
@@ -222,7 +317,7 @@ final class OverlayChipView extends View {
     }
 
     private void drawPausePlay(Canvas c, float x, float y, boolean running) {
-        float s = Ui.dp(getContext(), 4.7f);
+        float s = Ui.dp(getContext(), 4.5f);
         if (running) {
             c.drawLine(x - s / 2, y - s, x - s / 2, y + s, glyph);
             c.drawLine(x + s / 2, y - s, x + s / 2, y + s, glyph);
@@ -237,14 +332,14 @@ final class OverlayChipView extends View {
     }
 
     private void drawSkip(Canvas c, float x, float y) {
-        float s = Ui.dp(getContext(), 4.6f);
+        float s = Ui.dp(getContext(), 4.4f);
         c.drawLine(x - s, y - s, x + s * 0.3f, y, glyph);
         c.drawLine(x + s * 0.3f, y, x - s, y + s, glyph);
         c.drawLine(x + s, y - s, x + s, y + s, glyph);
     }
 
     private void drawClose(Canvas c, float x, float y) {
-        float s = Ui.dp(getContext(), 4f);
+        float s = Ui.dp(getContext(), 3.8f);
         c.drawLine(x - s, y - s, x + s, y + s, glyph);
         c.drawLine(x + s, y - s, x - s, y + s, glyph);
     }
