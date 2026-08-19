@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'app.still.pomodoro'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'app.still.pomodoro'
+        minSdk 26
+        targetSdk 36
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    def releaseStore = System.getenv('STILL_STORE_FILE')
+    if (releaseStore != null && !releaseStore.isBlank()) {
+        signingConfigs {
+            release {
+                storeFile file(releaseStore)
+                storePassword System.getenv('STILL_STORE_PASSWORD')
+                keyAlias System.getenv('STILL_KEY_ALIAS')
+                keyPassword System.getenv('STILL_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (releaseStore != null && !releaseStore.isBlank()) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
