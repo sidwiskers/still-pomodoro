@@ -3,6 +3,8 @@ name: Runtime smoke
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,8 +34,24 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
-      - name: Build debug APK
-        run: gradle :app:assembleDebug
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_B64"
+          echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/still-release.jks"
+          chmod 600 "$RUNNER_TEMP/still-release.jks"
+
+      - name: Build signed release APK
+        env:
+          STILL_STORE_FILE: ${{ runner.temp }}/still-release.jks
+          STILL_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          STILL_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          STILL_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease
+
+      - name: Verify signature
+        run: "$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose app/build/outputs/apk/release/app-release.apk"
 
       - name: Launch and detect runtime crash
         uses: reactivecircus/android-emulator-runner@v2
@@ -43,17 +61,21 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/release/app-release.apk
             adb logcat -c
-            adb shell am force-stop app.still.pomodoro.debug
-            adb shell am start -W -n app.still.pomodoro.debug/app.still.pomodoro.MainActivity
-            sleep 4
+            adb shell am force-stop app.still.pomodoro
+            set +e
+            adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity
+            START_STATUS=$?
+            sleep 5
             adb logcat -d > runtime-logcat.txt
             cat runtime-logcat.txt
-            if grep -A 80 -B 10 -E 'FATAL EXCEPTION|Process: app\.still\.pomodoro\.debug' runtime-logcat.txt; then
+            set -e
+            if grep -A 100 -B 15 -E 'FATAL EXCEPTION|Process: app\.still\.pomodoro' runtime-logcat.txt; then
               exit 1
             fi
-            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|app.still.pomodoro.debug'
+            test "$START_STATUS" -eq 0
+            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|app.still.pomodoro'
 
       - name: Upload logcat
         if: always()
