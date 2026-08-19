@@ -3,13 +3,14 @@ name: Publish v1.0.1
 on:
   push:
     branches: [main]
+    paths:
+      - '.github/release-v1.0.1'
 
 permissions:
   contents: write
 
 jobs:
   release:
-    if: github.event.head_commit.message == 'release: publish v1.0.1'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
