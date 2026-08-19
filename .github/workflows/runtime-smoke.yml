@@ -70,23 +70,21 @@ jobs:
             adb install -r app/build/outputs/apk/release/app-release.apk
             adb logcat -c || true
             adb shell am force-stop app.still.pomodoro
-            set +e
-            adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity
-            START_STATUS=$?
+            adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity | tee start-output.txt
+            grep -q 'Status: ok' start-output.txt
             sleep 5
             adb logcat -d > runtime-logcat.txt || true
-            cat runtime-logcat.txt || true
-            set -e
-            if grep -A 100 -B 15 -E 'FATAL EXCEPTION|Process: app\.still\.pomodoro' runtime-logcat.txt; then
-              exit 1
-            fi
-            test "$START_STATUS" -eq 0
-            adb shell dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity|app.still.pomodoro'
+            ! grep -qE 'FATAL EXCEPTION|Process: app\.still\.pomodoro' runtime-logcat.txt
+            adb shell dumpsys activity activities > activity-state.txt
+            grep -q 'app.still.pomodoro/.MainActivity' activity-state.txt
 
-      - name: Upload logcat
+      - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: runtime-logcat-api-${{ matrix.api }}
-          path: runtime-logcat.txt
+          name: runtime-diagnostics-api-${{ matrix.api }}
+          path: |
+            start-output.txt
+            runtime-logcat.txt
+            activity-state.txt
           if-no-files-found: ignore
