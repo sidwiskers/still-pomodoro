@@ -31,6 +31,8 @@ final class OverlayChipView extends View {
     private final Paint time = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint meta = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint glyph = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint controlFill = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint divider = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
     private boolean expanded;
     private float downRawX, downRawY, lastRawX, lastRawY;
@@ -50,14 +52,14 @@ final class OverlayChipView extends View {
         this.host = host;
         this.engine = new TimerEngine(context);
 
-        surface.setColor(Color.argb(246, 17, 19, 16));
+        surface.setColor(Color.argb(248, 16, 18, 15));
         border.setColor(Color.argb(180, 48, 52, 43));
         border.setStyle(Paint.Style.STROKE);
         border.setStrokeWidth(Ui.dp(context, 1));
 
         accent.setColor(Ui.ACCENT);
         accent.setStrokeCap(Paint.Cap.ROUND);
-        accentSoft.setColor(Color.argb(74, 216, 255, 106));
+        accentSoft.setColor(Color.argb(62, 216, 255, 106));
         accentSoft.setStrokeCap(Paint.Cap.ROUND);
 
         time.setColor(Ui.TEXT);
@@ -69,9 +71,13 @@ final class OverlayChipView extends View {
         meta.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
 
         glyph.setColor(Ui.TEXT);
-        glyph.setStrokeWidth(Ui.dp(context, 1.7f));
+        glyph.setStrokeWidth(Ui.dp(context, 1.65f));
         glyph.setStrokeCap(Paint.Cap.ROUND);
         glyph.setStyle(Paint.Style.STROKE);
+
+        controlFill.setColor(Color.argb(72, 55, 59, 50));
+        divider.setColor(Color.argb(90, 62, 66, 56));
+        divider.setStrokeWidth(Ui.dp(context, 1));
     }
 
     @Override protected void onAttachedToWindow() {
@@ -86,7 +92,7 @@ final class OverlayChipView extends View {
 
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        float radius = Ui.dp(getContext(), 22);
+        float radius = Ui.dp(getContext(), 19);
         rect.set(Ui.dp(getContext(), 1), Ui.dp(getContext(), 1), getWidth() - Ui.dp(getContext(), 1), getHeight() - Ui.dp(getContext(), 1));
         canvas.drawRoundRect(rect, radius, radius, surface);
         canvas.drawRoundRect(rect, radius, radius, border);
@@ -95,30 +101,37 @@ final class OverlayChipView extends View {
         long seconds = Math.max(0L, (s.remainingMillis + 999L) / 1000L);
         String clock = String.format(Locale.US, "%02d:%02d", seconds / 60L, seconds % 60L);
 
-        accent.setStrokeWidth(Ui.dp(getContext(), 2.4f));
-        canvas.drawLine(Ui.dp(getContext(), 13), Ui.dp(getContext(), 15), Ui.dp(getContext(), 13), getHeight() - Ui.dp(getContext(), 15), accent);
+        accent.setStrokeWidth(Ui.dp(getContext(), 2.2f));
+        canvas.drawLine(Ui.dp(getContext(), 11), Ui.dp(getContext(), 14), Ui.dp(getContext(), 11), getHeight() - Ui.dp(getContext(), 14), accent);
 
         if (!expanded) {
-            meta.setTextSize(Ui.dp(getContext(), 8.5f));
-            time.setTextSize(Ui.dp(getContext(), 19));
-            canvas.drawText(engine.phaseLabel(s.phase).replace(" BREAK", "").toUpperCase(Locale.US), Ui.dp(getContext(), 45), Ui.dp(getContext(), 22), meta);
-            canvas.drawText(clock, getWidth() * 0.63f, Ui.dp(getContext(), 36), time);
+            meta.setTextSize(Ui.dp(getContext(), 8.1f));
+            time.setTextSize(Ui.dp(getContext(), 17.5f));
+            canvas.drawText(engine.phaseLabel(s.phase).replace(" BREAK", "").toUpperCase(Locale.US), Ui.dp(getContext(), 39), Ui.dp(getContext(), 31), meta);
+            canvas.drawText(clock, Ui.dp(getContext(), 100), Ui.dp(getContext(), 33), time);
         } else {
-            time.setTextSize(Ui.dp(getContext(), 18));
-            canvas.drawText(clock, Ui.dp(getContext(), 50), Ui.dp(getContext(), 35), time);
-            float zone = (getWidth() - Ui.dp(getContext(), 92)) / 3f;
-            drawPausePlay(canvas, Ui.dp(getContext(), 92) + zone * 0.5f, getHeight() / 2f, s.running);
-            drawSkip(canvas, Ui.dp(getContext(), 92) + zone * 1.5f, getHeight() / 2f);
-            drawClose(canvas, Ui.dp(getContext(), 92) + zone * 2.5f, getHeight() / 2f);
+            time.setTextSize(Ui.dp(getContext(), 16.5f));
+            canvas.drawText(clock, Ui.dp(getContext(), 40), Ui.dp(getContext(), 33), time);
+
+            float start = Ui.dp(getContext(), 72);
+            canvas.drawLine(start, Ui.dp(getContext(), 11), start, getHeight() - Ui.dp(getContext(), 11), divider);
+            float zone = (getWidth() - start) / 3f;
+            for (int i = 0; i < 3; i++) {
+                float x = start + zone * (i + 0.5f);
+                canvas.drawCircle(x, getHeight() / 2f, Ui.dp(getContext(), 12.5f), controlFill);
+            }
+            drawPausePlay(canvas, start + zone * 0.5f, getHeight() / 2f, s.running);
+            drawSkip(canvas, start + zone * 1.5f, getHeight() / 2f);
+            drawClose(canvas, start + zone * 2.5f, getHeight() / 2f);
         }
 
         float fraction = Math.max(0f, Math.min(1f, (float) s.remainingMillis / Math.max(1f, engine.durationFor(s.phase))));
-        float left = Ui.dp(getContext(), 23);
-        float right = getWidth() - Ui.dp(getContext(), 17);
-        float y = getHeight() - Ui.dp(getContext(), 6);
-        accentSoft.setStrokeWidth(Ui.dp(getContext(), 2.2f));
+        float left = Ui.dp(getContext(), 18);
+        float right = getWidth() - Ui.dp(getContext(), 13);
+        float y = getHeight() - Ui.dp(getContext(), 5);
+        accentSoft.setStrokeWidth(Ui.dp(getContext(), 1.8f));
         canvas.drawLine(left, y, right, y, accentSoft);
-        accent.setStrokeWidth(Ui.dp(getContext(), 2.2f));
+        accent.setStrokeWidth(Ui.dp(getContext(), 1.8f));
         canvas.drawLine(left, y, left + (right - left) * fraction, y, accent);
     }
 
@@ -161,7 +174,7 @@ final class OverlayChipView extends View {
     }
 
     private void handleExpandedTap(float x) {
-        float start = Ui.dp(getContext(), 88);
+        float start = Ui.dp(getContext(), 72);
         if (x < start) {
             expanded = false;
             host.setExpanded(false);
@@ -180,7 +193,7 @@ final class OverlayChipView extends View {
     }
 
     private void drawPausePlay(Canvas c, float x, float y, boolean running) {
-        float s = Ui.dp(getContext(), 6);
+        float s = Ui.dp(getContext(), 5.5f);
         if (running) {
             c.drawLine(x - s / 2, y - s, x - s / 2, y + s, glyph);
             c.drawLine(x + s / 2, y - s, x + s / 2, y + s, glyph);
@@ -195,14 +208,14 @@ final class OverlayChipView extends View {
     }
 
     private void drawSkip(Canvas c, float x, float y) {
-        float s = Ui.dp(getContext(), 6);
+        float s = Ui.dp(getContext(), 5.3f);
         c.drawLine(x - s, y - s, x + s * 0.35f, y, glyph);
         c.drawLine(x + s * 0.35f, y, x - s, y + s, glyph);
         c.drawLine(x + s, y - s, x + s, y + s, glyph);
     }
 
     private void drawClose(Canvas c, float x, float y) {
-        float s = Ui.dp(getContext(), 5);
+        float s = Ui.dp(getContext(), 4.7f);
         c.drawLine(x - s, y - s, x + s, y + s, glyph);
         c.drawLine(x + s, y - s, x - s, y + s, glyph);
     }
