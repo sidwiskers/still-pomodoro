@@ -269,10 +269,16 @@ public final class MainActivity extends Activity {
                     View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
         getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
-            android.graphics.Insets bars = Build.VERSION.SDK_INT >= 29
-                    ? insets.getInsets(WindowInsets.Type.systemBars())
-                    : android.graphics.Insets.of(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
-            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
+                v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            } else {
+                v.setPadding(
+                        insets.getSystemWindowInsetLeft(),
+                        insets.getSystemWindowInsetTop(),
+                        insets.getSystemWindowInsetRight(),
+                        insets.getSystemWindowInsetBottom());
+            }
             return insets;
         });
     }
