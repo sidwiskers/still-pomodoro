@@ -43,7 +43,6 @@ public final class MainActivity extends Activity {
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         engine = new TimerEngine(this);
-        NotificationHelper.ensureChannels(this);
         configureWindow();
         setContentView(buildContent());
     }
@@ -120,136 +119,111 @@ public final class MainActivity extends Activity {
         TextView reset = Ui.pill(this, "Reset", false);
         reset.setOnClickListener(v -> {
             Ui.feedback(v);
-            engine.resetCurrent();
+            engine.reset();
             render();
         });
-        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 0.62f));
-        root.addView(controls, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, 50), 1f));
+        root.addView(controls, matchWrap());
 
-        LinearLayout features = new LinearLayout(this);
-        features.setOrientation(LinearLayout.HORIZONTAL);
-        features.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams featuresLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        featuresLp.topMargin = Ui.dp(this, 12);
+        LinearLayout modes = new LinearLayout(this);
+        modes.setOrientation(LinearLayout.HORIZONTAL);
+        modes.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams modesLp = matchWrap();
+        modesLp.topMargin = Ui.dp(this, 12);
+
+        TextView lowPower = Ui.pill(this, "Low power", false);
+        lowPower.setOnClickListener(v -> {
+            Ui.feedback(v);
+            startActivity(new Intent(this, LowPowerActivity.class));
+        });
+        modes.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+
+        Space modeGap = new Space(this);
+        modes.addView(modeGap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
 
         TextView overlay = Ui.pill(this, "Float", false);
         overlay.setOnClickListener(v -> {
             Ui.feedback(v);
             toggleOverlay();
         });
-        features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
+        modes.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, 44), 1f));
+        root.addView(modes, modesLp);
 
-        Space g2 = new Space(this);
-        features.addView(g2, new LinearLayout.LayoutParams(Ui.dp(this, 8), 1));
-
-        TextView clock = Ui.pill(this, "Low power", false);
-        clock.setOnClickListener(v -> {
-            Ui.feedback(v);
-            startActivity(new Intent(this, LowPowerActivity.class));
-        });
-        features.addView(clock, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 1f));
-
-        Space g3 = new Space(this);
-        features.addView(g3, new LinearLayout.LayoutParams(Ui.dp(this, 8), 1));
-
-        TextView settings = Ui.pill(this, "Tune", false);
+        TextView settings = new TextView(this);
+        settings.setText("Timing");
+        settings.setTextColor(Ui.MUTED);
+        settings.setGravity(Gravity.CENTER);
+        settings.setTextSize(12f);
+        settings.setPadding(Ui.dp(this, 14), Ui.dp(this, 15), Ui.dp(this, 14), Ui.dp(this, 15));
+        settings.setBackground(Ui.outline(this, 18));
         settings.setOnClickListener(v -> {
             Ui.feedback(v);
             showSettings();
         });
-        features.addView(settings, new LinearLayout.LayoutParams(0, Ui.dp(this, 46), 0.8f));
+        LinearLayout.LayoutParams settingsLp = matchWrap();
+        settingsLp.topMargin = Ui.dp(this, 12);
+        root.addView(settings, settingsLp);
 
-        root.addView(features, featuresLp);
-
-        TextView foot = new TextView(this);
-        foot.setText("No account · No network · No background polling");
-        foot.setTextColor(Color.rgb(92, 93, 87));
-        foot.setTextSize(10f);
-        foot.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams footLp = wrap();
-        footLp.topMargin = Ui.dp(this, 18);
-        root.addView(foot, footLp);
-
-        FrameLayout shell = new FrameLayout(this);
-        shell.setBackgroundColor(Ui.BG);
-        FrameLayout.LayoutParams shellLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER_HORIZONTAL);
-        shell.addView(root, shellLp);
-        return shell;
+        FrameLayout viewport = new FrameLayout(this);
+        viewport.setBackgroundColor(Ui.BG);
+        viewport.addView(root, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        viewport.setFitsSystemWindows(false);
+        return viewport;
     }
 
     private void render() {
-        TimerState s = engine.snapshot();
-        if (s.running && s.remainingMillis <= 0L) s = engine.finishIfDue();
-        dial.bind(s, engine.durationFor(s.phase), engine.phaseLabel(s.phase));
-        primary.setText(s.running ? "Pause" : "Start");
-        cycle.setText("session " + Math.min(engine.cycleSize(), s.focusInCycle + 1) + " of " + engine.cycleSize());
+        if (engine == null || dial == null || primary == null || cycle == null) return;
+        TimerState state = engine.snapshot();
+        long remaining = state.remainingNow();
+        long total = engine.durationFor(state.phase);
+        float progress = total <= 0L ? 0f : 1f - Math.min(1f, Math.max(0f, remaining / (float) total));
+        dial.setState(engine.phaseLabel(state.phase), remaining, progress, state.running);
+        primary.setText(state.running ? "Pause" : (remaining < total ? "Resume" : "Start"));
+        cycle.setText("cycle " + (Math.min(engine.cycleLength(), state.focusesInCycle + 1)) + " of " + engine.cycleLength());
     }
 
     private void showSettings() {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(Ui.dp(this, 22), Ui.dp(this, 8), Ui.dp(this, 22), Ui.dp(this, 6));
+        content.setPadding(Ui.dp(this, 20), Ui.dp(this, 8), Ui.dp(this, 20), 0);
 
-        NumberPicker focus = picker(1, 180, engine.focusMinutes());
-        NumberPicker shortBreak = picker(1, 60, engine.shortMinutes());
-        NumberPicker longBreak = picker(1, 120, engine.longMinutes());
-        NumberPicker cycles = picker(1, 12, engine.cycleSize());
-        content.addView(settingRow("Focus minutes", focus));
-        content.addView(settingRow("Short break", shortBreak));
-        content.addView(settingRow("Long break", longBreak));
-        content.addView(settingRow("Long break after", cycles));
+        NumberPicker focus = picker(1, 120, (int) (engine.focusMillis() / 60000L));
+        NumberPicker shortBreak = picker(1, 60, (int) (engine.shortBreakMillis() / 60000L));
+        NumberPicker longBreak = picker(1, 120, (int) (engine.longBreakMillis() / 60000L));
+        NumberPicker cycleLength = picker(2, 12, engine.cycleLength());
 
-        CheckBox autoBreak = check("Auto-start breaks", engine.autoBreak());
-        CheckBox autoFocus = check("Auto-start focus", engine.autoFocus());
-        CheckBox vibrate = check("Completion vibration", engine.vibrateEnabled());
-        content.addView(autoBreak);
-        content.addView(autoFocus);
+        content.addView(label("Focus minutes"));
+        content.addView(focus);
+        content.addView(label("Short break minutes"));
+        content.addView(shortBreak);
+        content.addView(label("Long break minutes"));
+        content.addView(longBreak);
+        content.addView(label("Long break every"));
+        content.addView(cycleLength);
+
+        CheckBox auto = new CheckBox(this);
+        auto.setText("Start next phase automatically");
+        auto.setTextColor(Ui.TEXT);
+        auto.setButtonTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+        auto.setChecked(engine.autoStart());
+        content.addView(auto);
+
+        CheckBox vibrate = new CheckBox(this);
+        vibrate.setText("Vibrate when a phase ends");
+        vibrate.setTextColor(Ui.TEXT);
+        vibrate.setButtonTintList(android.content.res.ColorStateList.valueOf(Ui.ACCENT));
+        vibrate.setChecked(engine.vibrate());
         content.addView(vibrate);
 
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Tune Still")
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle("Timing")
                 .setView(content)
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton("Save", (d, which) -> {
-                    engine.setDurations(focus.getValue(), shortBreak.getValue(), longBreak.getValue(), cycles.getValue());
-                    engine.setAutoStart(autoBreak.isChecked(), autoFocus.isChecked());
-                    engine.setVibrate(vibrate.isChecked());
+                    engine.saveSettings(focus.getValue(), shortBreak.getValue(), longBreak.getValue(), cycleLength.getValue(), auto.isChecked(), vibrate.isChecked());
                     render();
                 })
-                .create();
-        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.ACCENT));
-        dialog.show();
-    }
-
-    private View settingRow(String title, NumberPicker picker) {
-        LinearLayout row = new LinearLayout(this);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        TextView label = new TextView(this);
-        label.setText(title);
-        label.setTextColor(Ui.TEXT);
-        label.setTextSize(14f);
-        row.addView(label, new LinearLayout.LayoutParams(0, Ui.dp(this, 64), 1f));
-        row.addView(picker, new LinearLayout.LayoutParams(Ui.dp(this, 92), Ui.dp(this, 64)));
-        return row;
-    }
-
-    private NumberPicker picker(int min, int max, int value) {
-        NumberPicker picker = new NumberPicker(this);
-        picker.setMinValue(min);
-        picker.setMaxValue(max);
-        picker.setValue(value);
-        picker.setWrapSelectorWheel(false);
-        return picker;
-    }
-
-    private CheckBox check(String text, boolean checked) {
-        CheckBox c = new CheckBox(this);
-        c.setText(text);
-        c.setTextColor(Ui.TEXT);
-        c.setTextSize(14f);
-        c.setChecked(checked);
-        c.setMinHeight(Ui.dp(this, 46));
-        return c;
+                .show();
     }
 
     private void toggleOverlay() {
@@ -267,32 +241,65 @@ public final class MainActivity extends Activity {
     }
 
     private void startOverlay() {
-        Intent intent = new Intent(this, OverlayService.class);
-        if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent); else startService(intent);
+        requestNotificationsIfNeeded();
+        Intent service = new Intent(this, OverlayService.class);
+        if (Build.VERSION.SDK_INT >= 26) startForegroundService(service); else startService(service);
     }
 
     private void requestNotificationsIfNeeded() {
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 4001);
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 42);
         }
     }
 
     private void configureWindow() {
         getWindow().setStatusBarColor(Color.TRANSPARENT);
-        getWindow().setNavigationBarColor(Ui.BG);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
         if (Build.VERSION.SDK_INT >= 30) {
             getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController c = getWindow().getInsetsController();
-            if (c != null) c.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
-            getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
-                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars());
-                v.setPadding(0, bars.top, 0, bars.bottom);
-                return insets;
-            });
+            WindowInsetsController controller = getWindow().getInsetsController();
+            if (controller != null) {
+                controller.setSystemBarsAppearance(0,
+                        WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            }
+        } else {
+            getWindow().getDecorView().setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
+        getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+            android.graphics.Insets bars = Build.VERSION.SDK_INT >= 29
+                    ? insets.getInsets(WindowInsets.Type.systemBars())
+                    : android.graphics.Insets.of(0, insets.getSystemWindowInsetTop(), 0, insets.getSystemWindowInsetBottom());
+            v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
+        });
+    }
+
+    private NumberPicker picker(int min, int max, int value) {
+        NumberPicker picker = new NumberPicker(this);
+        picker.setMinValue(min);
+        picker.setMaxValue(max);
+        picker.setValue(Math.max(min, Math.min(max, value)));
+        picker.setWrapSelectorWheel(false);
+        return picker;
+    }
+
+    private TextView label(String text) {
+        TextView label = new TextView(this);
+        label.setText(text);
+        label.setTextColor(Ui.MUTED);
+        label.setTextSize(12f);
+        label.setPadding(0, Ui.dp(this, 12), 0, Ui.dp(this, 3));
+        return label;
     }
 
     private static LinearLayout.LayoutParams wrap() {
         return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+    }
+
+    private static LinearLayout.LayoutParams matchWrap() {
+        return new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 }
