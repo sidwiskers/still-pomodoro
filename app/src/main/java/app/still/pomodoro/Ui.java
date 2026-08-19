@@ -45,7 +45,7 @@ final class Ui {
         return view;
     }
 
-    static TextView tile(Context context, String text) {
+    static TextView segmentTile(Context context, String text, int position) {
         TextView view = new TextView(context);
         view.setText(text);
         view.setTextSize(12.5f);
@@ -53,25 +53,12 @@ final class Ui {
         view.setGravity(Gravity.CENTER);
         view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         view.setLetterSpacing(0.035f);
-        view.setMinHeight(dp(context, 46));
-        view.setPadding(dp(context, 12), 0, dp(context, 12), 0);
-        view.setBackground(outlinedSurface(context, 18f));
+        view.setMinHeight(dp(context, 44));
+        view.setPadding(dp(context, 10), 0, dp(context, 10), 0);
+        view.setBackground(segmentSurface(context, position));
         view.setClickable(true);
         view.setFocusable(true);
         addPressMotion(view);
-        return view;
-    }
-
-    static TextView tag(Context context, String text) {
-        TextView view = new TextView(context);
-        view.setText(text);
-        view.setTextSize(10.5f);
-        view.setTextColor(MUTED);
-        view.setGravity(Gravity.CENTER);
-        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        view.setLetterSpacing(0.11f);
-        view.setPadding(dp(context, 13), dp(context, 8), dp(context, 13), dp(context, 8));
-        view.setBackground(outlinedSurface(context, 16f));
         return view;
     }
 
@@ -97,6 +84,23 @@ final class Ui {
                 new int[]{Color.rgb(22, 24, 20), Color.rgb(14, 15, 13)});
         d.setCornerRadius(dp(context, radiusDp));
         d.setStroke(dp(context, 1), Color.rgb(36, 39, 32));
+        return d;
+    }
+
+    private static GradientDrawable segmentSurface(Context context, int position) {
+        GradientDrawable d = new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.rgb(34, 36, 30), Color.rgb(24, 26, 22)});
+        float big = dp(context, 18);
+        float small = dp(context, 7);
+        if (position == 0) {
+            d.setCornerRadii(new float[]{big, big, small, small, small, small, big, big});
+        } else if (position == 2) {
+            d.setCornerRadii(new float[]{small, small, big, big, big, big, small, small});
+        } else {
+            d.setCornerRadius(small);
+        }
+        d.setStroke(dp(context, 1), Color.rgb(48, 51, 43));
         return d;
     }
 
