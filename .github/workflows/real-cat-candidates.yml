@@ -11,27 +11,23 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch Freesound page
+      - name: Install audio tools
+        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - name: Fetch cute meow preview
         run: |
           curl -L --fail --retry 3 \
-            'https://freesound.org/people/Breviceps/sounds/448084/' \
-            -o sound.html
-          python3 - <<'PY'
-          import re, html
-          s=open('sound.html', encoding='utf-8', errors='ignore').read()
-          s=html.unescape(s).replace('\\u002F','/').replace('\\/','/')
-          urls=[]
-          for p in [r'https://cdn\.freesound\.org[^"\'<> ]+', r'https://freesound\.org/data/previews/[^"\'<> ]+', r'/data/previews/[^"\'<> ]+']:
-              urls += re.findall(p,s)
-          urls=list(dict.fromkeys(urls))
-          print('\n'.join(urls))
-          open('preview-urls.txt','w').write('\n'.join(urls))
-          PY
-      - name: Upload probe
+            'https://cdn.freesound.org/previews/448/448084_9159316-hq.mp3' \
+            -o cute-meow-hq.mp3
+          ffprobe -v error -show_entries format=duration,size,bit_rate -of default=nw=1 cute-meow-hq.mp3
+      - name: Prepare Still preview
+        run: |
+          ffmpeg -hide_banner -y -i cute-meow-hq.mp3 \
+            -af "highpass=f=90,lowpass=f=15000,loudnorm=I=-17:TP=-1.5:LRA=7,afade=t=in:st=0:d=0.008,afade=t=out:st=0.56:d=0.035" \
+            -ac 1 -ar 32000 -c:a libvorbis -q:a 5 still-cute-meow.ogg
+          ffprobe -v error -show_entries format=duration,size,bit_rate -of default=nw=1 still-cute-meow.ogg
+      - name: Upload preview
         uses: actions/upload-artifact@v4
         with:
-          name: cute-meow-probe
-          path: |
-            sound.html
-            preview-urls.txt
+          name: still-cute-meow
+          path: still-cute-meow.ogg
           if-no-files-found: error
