@@ -42,7 +42,6 @@ jobs:
           script: |
             set -eu
             adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell pm clear app.still.pomodoro >/dev/null
             adb shell pm grant app.still.pomodoro android.permission.POST_NOTIFICATIONS || true
             adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity >/dev/null
             sleep 2
