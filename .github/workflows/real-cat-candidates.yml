@@ -1,4 +1,4 @@
-name: Real cat candidates
+name: Cute meow candidate
 
 on:
   pull_request:
@@ -11,33 +11,27 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     steps:
-      - name: Install audio tools
-        run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
-      - name: Fetch public-domain cat recordings
+      - name: Fetch Freesound page
         run: |
           curl -L --fail --retry 3 \
-            'https://upload.wikimedia.org/wikipedia/commons/c/c0/Maullido_de_gata_hembra_joven.ogg' \
-            -o youngcat.ogg
-          curl -L --fail --retry 3 \
-            'https://upload.wikimedia.org/wikipedia/commons/c/c9/Whiskers%27_purr.ogg' \
-            -o whiskers.ogg
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 youngcat.ogg
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 whiskers.ogg
-      - name: Prepare actual-cat previews
-        run: |
-          ffmpeg -hide_banner -y -i youngcat.ogg \
-            -af "highpass=f=70,lowpass=f=15000,loudnorm=I=-18:TP=-1.5:LRA=7,afade=t=in:st=0:d=0.015,afade=t=out:st=1.10:d=0.05" \
-            -ac 1 -ar 32000 -c:a libvorbis -q:a 4 focus-real-meow.ogg
-          ffmpeg -hide_banner -y -ss 9.56 -to 10.46 -i whiskers.ogg \
-            -af "highpass=f=70,lowpass=f=15000,loudnorm=I=-19:TP=-1.5:LRA=7,afade=t=in:st=0:d=0.015,afade=t=out:st=0.84:d=0.05" \
-            -ac 1 -ar 32000 -c:a libvorbis -q:a 4 break-real-meow.ogg
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 focus-real-meow.ogg
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 break-real-meow.ogg
-      - name: Upload previews
+            'https://freesound.org/people/Breviceps/sounds/448084/' \
+            -o sound.html
+          python3 - <<'PY'
+          import re, html
+          s=open('sound.html', encoding='utf-8', errors='ignore').read()
+          s=html.unescape(s).replace('\\u002F','/').replace('\\/','/')
+          urls=[]
+          for p in [r'https://cdn\.freesound\.org[^"\'<> ]+', r'https://freesound\.org/data/previews/[^"\'<> ]+', r'/data/previews/[^"\'<> ]+']:
+              urls += re.findall(p,s)
+          urls=list(dict.fromkeys(urls))
+          print('\n'.join(urls))
+          open('preview-urls.txt','w').write('\n'.join(urls))
+          PY
+      - name: Upload probe
         uses: actions/upload-artifact@v4
         with:
-          name: real-cat-previews
+          name: cute-meow-probe
           path: |
-            focus-real-meow.ogg
-            break-real-meow.ogg
+            sound.html
+            preview-urls.txt
           if-no-files-found: error
