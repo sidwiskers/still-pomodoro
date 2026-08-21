@@ -20,8 +20,10 @@ final class NotificationHelper {
     static final int OVERLAY_ID = 1003;
 
     private static final String TIMER_CHANNEL = "timer";
-    private static final String FOCUS_DONE_CHANNEL = "focus_done_v1";
-    private static final String BREAK_DONE_CHANNEL = "break_done_v1";
+    private static final String FOCUS_DONE_CHANNEL = "focus_done_v2";
+    private static final String BREAK_DONE_CHANNEL = "break_done_v2";
+    private static final String LEGACY_FOCUS_DONE_CHANNEL = "focus_done_v1";
+    private static final String LEGACY_BREAK_DONE_CHANNEL = "break_done_v1";
     static final String OVERLAY_CHANNEL = "overlay";
     private static final String ACTIVE_GROUP = "still_active";
 
@@ -52,6 +54,9 @@ final class NotificationHelper {
         breakDone.setSound(resourceUri(context, R.raw.break_complete), alarmAudio);
         breakDone.enableVibration(false);
         nm.createNotificationChannel(breakDone);
+
+        nm.deleteNotificationChannel(LEGACY_FOCUS_DONE_CHANNEL);
+        nm.deleteNotificationChannel(LEGACY_BREAK_DONE_CHANNEL);
 
         NotificationChannel overlay = new NotificationChannel(OVERLAY_CHANNEL, "Floating timer", NotificationManager.IMPORTANCE_MIN);
         overlay.setDescription("Required only while the floating timer is visible");
