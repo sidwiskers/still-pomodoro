@@ -63,26 +63,8 @@ jobs:
             adb shell dumpsys notification --noredact > notification-after.txt
             adb shell dumpsys activity services > services-after.txt
             adb logcat -d > logcat.txt || true
-            grep -q 'app.still.pomodoro' services-after.txt
-            python3 - <<'PY'
-            import re
-            def extract(path):
-                text=open(path, encoding='utf-8', errors='ignore').read()
-                blocks=re.split(r'(?=NotificationRecord)', text)
-                block=next((b for b in blocks if 'pkg=app.still.pomodoro' in b and ('id=1001' in b or 'id=1001 ' in b)), '')
-                if not block:
-                    raise SystemExit(f'timer notification missing in {path}')
-                for p in [r'android\.progress=([0-9]+)', r'android\.progress[^0-9]+([0-9]+)', r'progress=([0-9]+)']:
-                    m=re.search(p, block)
-                    if m:
-                        return int(m.group(1))
-                raise SystemExit(f'progress field not found in {path}\n{block[:5000]}')
-            before=extract('notification-before.txt')
-            after=extract('notification-after.txt')
-            print('notification progress:', before, '->', after)
-            if after <= before:
-                raise SystemExit('notification progress did not advance')
-            PY
+            grep -q 'TimerNotificationService' services-after.txt
+            python3 -c 'import re; f=lambda p:int(re.search(r"android\.progress=Integer \(([0-9]+)\)",open(p,encoding="utf-8",errors="ignore").read()).group(1)); b=f("notification-before.txt"); a=f("notification-after.txt"); print("notification progress:",b,"->",a); assert a>b, "notification progress did not advance"'
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
