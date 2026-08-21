@@ -63,9 +63,16 @@ final class NotificationHelper {
 
     static void showRunning(Context context, TimerState state) {
         ensureChannels(context);
+        notify(context, TIMER_ID, runningNotification(context, state));
+        TimerNotificationService.start(context);
+    }
+
+    static Notification runningNotification(Context context, TimerState state) {
         TimerEngine engine = new TimerEngine(context);
-        long remaining = Math.max(0L, state.endAtMillis - System.currentTimeMillis());
-        Notification.Builder b = baseTimerBuilder(context)
+        long remaining = state.running
+                ? Math.max(0L, state.endAtMillis - System.currentTimeMillis())
+                : Math.max(0L, state.remainingMillis);
+        return baseTimerBuilder(context)
                 .setContentTitle(titleCase(engine.phaseLabel(state.phase)))
                 .setContentText(sessionText(engine, state))
                 .setWhen(System.currentTimeMillis() + remaining)
@@ -75,11 +82,12 @@ final class NotificationHelper {
                 .setOngoing(true)
                 .addAction(action(context, android.R.drawable.ic_media_pause, "Pause", ActionReceiver.PAUSE, 11))
                 .addAction(action(context, android.R.drawable.ic_media_next, "Skip", ActionReceiver.SKIP, 12))
-                .addAction(action(context, android.R.drawable.ic_menu_close_clear_cancel, "Stop", ActionReceiver.STOP, 13));
-        notify(context, TIMER_ID, b.build());
+                .addAction(action(context, android.R.drawable.ic_menu_close_clear_cancel, "Stop", ActionReceiver.STOP, 13))
+                .build();
     }
 
     static void showPaused(Context context, TimerState state) {
+        TimerNotificationService.stop(context);
         ensureChannels(context);
         TimerEngine engine = new TimerEngine(context);
         Notification.Builder b = baseTimerBuilder(context)
@@ -95,6 +103,7 @@ final class NotificationHelper {
     }
 
     static void showCompletion(Context context, TimerState.Phase completed, TimerState next, boolean vibrate) {
+        TimerNotificationService.stop(context);
         ensureChannels(context);
         boolean focusCompleted = completed == TimerState.Phase.FOCUS;
         String channel = focusCompleted ? FOCUS_DONE_CHANNEL : BREAK_DONE_CHANNEL;
@@ -138,6 +147,7 @@ final class NotificationHelper {
     }
 
     static void cancelTimer(Context context) {
+        TimerNotificationService.stop(context);
         NotificationManager nm = context.getSystemService(NotificationManager.class);
         if (nm != null) nm.cancel(TIMER_ID);
     }
