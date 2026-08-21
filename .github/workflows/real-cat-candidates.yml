@@ -13,22 +13,31 @@ jobs:
     steps:
       - name: Install audio tools
         run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
-      - name: Fetch public-domain cat recording
+      - name: Fetch public-domain cat recordings
         run: |
           curl -L --fail --retry 3 \
             'https://upload.wikimedia.org/wikipedia/commons/6/6b/Meow_of_a_pleading_cat.oga' \
-            -o cat-source.oga
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 cat-source.oga
-      - name: Convert source for review
+            -o pleading.oga
+          curl -L --fail --retry 3 \
+            'https://upload.wikimedia.org/wikipedia/commons/c/c9/Whiskers%27_purr.ogg' \
+            -o whiskers.ogg
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 pleading.oga
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 whiskers.ogg
+      - name: Convert sources for review
         run: |
-          ffmpeg -hide_banner -y -i cat-source.oga -ac 1 -ar 32000 cat-source.wav
-          ffmpeg -hide_banner -i cat-source.wav -af silencedetect=noise=-34dB:d=0.12 -f null - 2> silence.txt || true
-      - name: Upload source and analysis
+          ffmpeg -hide_banner -y -i pleading.oga -ac 1 -ar 32000 pleading.wav
+          ffmpeg -hide_banner -i pleading.wav -af silencedetect=noise=-34dB:d=0.12 -f null - 2> pleading-silence.txt || true
+          ffmpeg -hide_banner -y -i whiskers.ogg -ac 1 -ar 44100 whiskers.wav
+          ffmpeg -hide_banner -i whiskers.wav -af silencedetect=noise=-32dB:d=0.12 -f null - 2> whiskers-silence.txt || true
+      - name: Upload sources and analysis
         uses: actions/upload-artifact@v4
         with:
           name: real-cat-source
           path: |
-            cat-source.oga
-            cat-source.wav
-            silence.txt
+            pleading.oga
+            pleading.wav
+            pleading-silence.txt
+            whiskers.ogg
+            whiskers.wav
+            whiskers-silence.txt
           if-no-files-found: error
