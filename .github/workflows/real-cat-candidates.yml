@@ -16,28 +16,28 @@ jobs:
       - name: Fetch public-domain cat recordings
         run: |
           curl -L --fail --retry 3 \
-            'https://upload.wikimedia.org/wikipedia/commons/6/6b/Meow_of_a_pleading_cat.oga' \
-            -o pleading.oga
+            'https://upload.wikimedia.org/wikipedia/commons/c/c0/Maullido_de_gata_hembra_joven.ogg' \
+            -o youngcat.ogg
           curl -L --fail --retry 3 \
             'https://upload.wikimedia.org/wikipedia/commons/c/c9/Whiskers%27_purr.ogg' \
             -o whiskers.ogg
-          ffprobe -v error -show_entries format=duration,size -of default=nw=1 pleading.oga
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 youngcat.ogg
           ffprobe -v error -show_entries format=duration,size -of default=nw=1 whiskers.ogg
-      - name: Convert sources for review
+      - name: Prepare actual-cat previews
         run: |
-          ffmpeg -hide_banner -y -i pleading.oga -ac 1 -ar 32000 pleading.wav
-          ffmpeg -hide_banner -i pleading.wav -af silencedetect=noise=-34dB:d=0.12 -f null - 2> pleading-silence.txt || true
-          ffmpeg -hide_banner -y -i whiskers.ogg -ac 1 -ar 44100 whiskers.wav
-          ffmpeg -hide_banner -i whiskers.wav -af silencedetect=noise=-32dB:d=0.12 -f null - 2> whiskers-silence.txt || true
-      - name: Upload sources and analysis
+          ffmpeg -hide_banner -y -i youngcat.ogg \
+            -af "highpass=f=70,lowpass=f=15000,loudnorm=I=-18:TP=-1.5:LRA=7,afade=t=in:st=0:d=0.015,afade=t=out:st=1.10:d=0.05" \
+            -ac 1 -ar 32000 -c:a libvorbis -q:a 4 focus-real-meow.ogg
+          ffmpeg -hide_banner -y -ss 9.56 -to 10.46 -i whiskers.ogg \
+            -af "highpass=f=70,lowpass=f=15000,loudnorm=I=-19:TP=-1.5:LRA=7,afade=t=in:st=0:d=0.015,afade=t=out:st=0.84:d=0.05" \
+            -ac 1 -ar 32000 -c:a libvorbis -q:a 4 break-real-meow.ogg
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 focus-real-meow.ogg
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 break-real-meow.ogg
+      - name: Upload previews
         uses: actions/upload-artifact@v4
         with:
-          name: real-cat-source
+          name: real-cat-previews
           path: |
-            pleading.oga
-            pleading.wav
-            pleading-silence.txt
-            whiskers.ogg
-            whiskers.wav
-            whiskers-silence.txt
+            focus-real-meow.ogg
+            break-real-meow.ogg
           if-no-files-found: error
