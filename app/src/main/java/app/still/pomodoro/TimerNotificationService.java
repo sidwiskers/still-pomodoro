@@ -12,7 +12,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.SystemClock;
 
-final class TimerNotificationService extends Service {
+public final class TimerNotificationService extends Service {
     private static final long REFRESH_INTERVAL_MS = 10_000L;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
