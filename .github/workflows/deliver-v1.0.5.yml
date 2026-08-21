@@ -1,0 +1,36 @@
+name: Deliver v1.0.5 APK
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download exact release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.0.5 \
+            --repo sidwiskers/still-pomodoro \
+            -p 'Still-1.0.5.apk' \
+            -p 'Still-1.0.5.sha256'
+          test -s Still-1.0.5.apk
+          test -s Still-1.0.5.sha256
+          sha256sum -c Still-1.0.5.sha256
+
+      - name: Upload exact release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: Still-1.0.5-release
+          path: |
+            Still-1.0.5.apk
+            Still-1.0.5.sha256
+          if-no-files-found: error
