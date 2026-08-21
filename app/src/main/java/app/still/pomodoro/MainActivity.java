@@ -12,6 +12,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.Settings;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +32,7 @@ public final class MainActivity extends Activity {
     private TimerDialView dial;
     private TextView primary;
     private TextView cycle;
+    private TextView today;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean overlayRequested;
 
@@ -120,11 +124,26 @@ public final class MainActivity extends Activity {
         cycleLp.topMargin = Ui.dp(this, 12);
         root.addView(cycle, cycleLp);
 
+        today = new TextView(this);
+        today.setTextColor(Ui.MUTED);
+        today.setTextSize(tablet ? 12f : 11.5f);
+        today.setGravity(Gravity.CENTER);
+        today.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+        today.setLetterSpacing(0.06f);
+        today.setMinHeight(Ui.dp(this, 34));
+        today.setPadding(Ui.dp(this, 12), 0, Ui.dp(this, 12), 0);
+        today.setClickable(true);
+        today.setFocusable(true);
+        today.setOnClickListener(v -> { Ui.feedback(v); showFocusHistory(); });
+        LinearLayout.LayoutParams todayLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, 34));
+        todayLp.topMargin = Ui.dp(this, 3);
+        root.addView(today, todayLp);
+
         LinearLayout controls = new LinearLayout(this);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams controlsLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        controlsLp.topMargin = Ui.dp(this, 14);
+        controlsLp.topMargin = Ui.dp(this, 9);
 
         primary = Ui.pill(this, "Start", true);
         primary.setOnClickListener(v -> {
@@ -140,11 +159,7 @@ public final class MainActivity extends Activity {
         controls.addView(gap, new LinearLayout.LayoutParams(Ui.dp(this, 10), 1));
 
         TextView reset = Ui.pill(this, "Reset", false);
-        reset.setOnClickListener(v -> {
-            Ui.feedback(v);
-            engine.resetCurrent();
-            render();
-        });
+        reset.setOnClickListener(v -> { Ui.feedback(v); engine.resetCurrent(); render(); });
         controls.addView(reset, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 52 : 50), 0.58f));
         root.addView(controls, controlsLp);
 
@@ -155,30 +170,21 @@ public final class MainActivity extends Activity {
         featuresLp.topMargin = Ui.dp(this, 9);
 
         TextView overlay = Ui.segmentTile(this, "Float", 0);
-        overlay.setOnClickListener(v -> {
-            Ui.feedback(v);
-            toggleOverlay();
-        });
+        overlay.setOnClickListener(v -> { Ui.feedback(v); toggleOverlay(); });
         features.addView(overlay, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
 
         Space g2 = new Space(this);
         features.addView(g2, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
 
         TextView lowPower = Ui.segmentTile(this, "Low power", 1);
-        lowPower.setOnClickListener(v -> {
-            Ui.feedback(v);
-            startActivity(new Intent(this, LowPowerActivity.class));
-        });
+        lowPower.setOnClickListener(v -> { Ui.feedback(v); startActivity(new Intent(this, LowPowerActivity.class)); });
         features.addView(lowPower, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
 
         Space g3 = new Space(this);
         features.addView(g3, new LinearLayout.LayoutParams(Ui.dp(this, 4), 1));
 
         TextView timing = Ui.segmentTile(this, "Timing", 2);
-        timing.setOnClickListener(v -> {
-            Ui.feedback(v);
-            showSettings();
-        });
+        timing.setOnClickListener(v -> { Ui.feedback(v); showSettings(); });
         features.addView(timing, new LinearLayout.LayoutParams(0, Ui.dp(this, tablet ? 46 : 44), 1f));
         root.addView(features, featuresLp);
 
@@ -203,6 +209,81 @@ public final class MainActivity extends Activity {
         dial.bind(s, engine.durationFor(s.phase), engine.phaseLabel(s.phase), engine.cycleSize());
         primary.setText(s.running ? "Pause" : "Start");
         cycle.setText("SESSION " + Math.min(engine.cycleSize(), s.focusInCycle + 1) + " / " + engine.cycleSize());
+        bindToday(engine.focusTodayMillis());
+    }
+
+    private void bindToday(long millis) {
+        String duration = formatFocusDuration(millis);
+        String text = "TODAY  ·  " + duration + "  ›";
+        SpannableString span = new SpannableString(text);
+        int start = text.indexOf(duration);
+        span.setSpan(new ForegroundColorSpan(Ui.ACCENT), start, start + duration.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        today.setText(span);
+        today.setContentDescription("Today, " + duration + " focused. Open focus history.");
+    }
+
+    private void showFocusHistory() {
+        long[] days = engine.focusLastDays(7);
+        long total = 0L;
+        for (long day : days) total += day;
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(Ui.dp(this, 18), Ui.dp(this, 4), Ui.dp(this, 18), Ui.dp(this, 12));
+
+        TextView note = new TextView(this);
+        note.setText("Focus time only");
+        note.setTextColor(Ui.MUTED);
+        note.setTextSize(11.5f);
+        note.setLetterSpacing(0.04f);
+        content.addView(note, wrap());
+
+        FocusHistoryView chart = new FocusHistoryView(this);
+        chart.setValues(days);
+        LinearLayout.LayoutParams chartLp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(this, isTablet() ? 224 : 198));
+        chartLp.topMargin = Ui.dp(this, 8);
+        content.addView(chart, chartLp);
+
+        LinearLayout summary = new LinearLayout(this);
+        summary.setOrientation(LinearLayout.HORIZONTAL);
+        summary.setGravity(Gravity.CENTER_VERTICAL);
+        summary.setPadding(0, Ui.dp(this, 4), 0, 0);
+        summary.addView(historyMetric("7 DAYS", formatFocusDuration(total)), new LinearLayout.LayoutParams(0, Ui.dp(this, 58), 1f));
+        summary.addView(historyMetric("DAILY AVG", formatFocusDuration(total / 7L)), new LinearLayout.LayoutParams(0, Ui.dp(this, 58), 1f));
+        content.addView(summary, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        AlertDialog dialog = new AlertDialog.Builder(this).setTitle("Focus history").setView(content).setPositiveButton("Close", null).create();
+        dialog.setOnShowListener(d -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.ACCENT);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(Ui.panel(this, 28f));
+                dialog.getWindow().setDimAmount(0.72f);
+            }
+        });
+        dialog.show();
+    }
+
+    private View historyMetric(String labelText, String valueText) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        TextView label = new TextView(this);
+        label.setText(labelText);
+        label.setTextColor(Ui.MUTED_2);
+        label.setTextSize(9.5f);
+        label.setLetterSpacing(0.11f);
+        label.setGravity(Gravity.CENTER);
+        box.addView(label, wrap());
+        TextView value = new TextView(this);
+        value.setText(valueText);
+        value.setTextColor(Ui.TEXT);
+        value.setTextSize(16f);
+        value.setTypeface(android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL));
+        value.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams valueLp = wrap();
+        valueLp.topMargin = Ui.dp(this, 3);
+        box.addView(value, valueLp);
+        return box;
     }
 
     private void showSettings() {
@@ -230,22 +311,42 @@ public final class MainActivity extends Activity {
                 .setTitle("Timing")
                 .setView(content)
                 .setNegativeButton("Cancel", null)
+                .setNeutralButton("Start over", null)
                 .setPositiveButton("Save", (d, which) -> {
                     engine.setDurations(focus.getValue(), shortBreak.getValue(), longBreak.getValue(), cycles.getValue());
                     engine.setAutoStart(autoBreak.isChecked(), autoFocus.isChecked());
                     engine.setVibrate(vibrate.isChecked());
                     render();
-                })
-                .create();
+                }).create();
         dialog.setOnShowListener(d -> {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.ACCENT);
             dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Ui.MUTED);
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(Ui.MUTED);
+            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v -> { Ui.feedback(v); confirmStartOver(dialog); });
             if (dialog.getWindow() != null) {
                 dialog.getWindow().setBackgroundDrawable(Ui.panel(this, 28f));
                 dialog.getWindow().setDimAmount(0.72f);
             }
         });
         dialog.show();
+    }
+
+    private void confirmStartOver(AlertDialog parent) {
+        AlertDialog confirm = new AlertDialog.Builder(this)
+                .setTitle("Start over this cycle?")
+                .setMessage("The timer returns to Focus · Session 1. Today's focus time stays recorded.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Start over", (d, which) -> { engine.resetAll(); parent.dismiss(); render(); })
+                .create();
+        confirm.setOnShowListener(d -> {
+            confirm.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.ACCENT);
+            confirm.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(Ui.MUTED);
+            if (confirm.getWindow() != null) {
+                confirm.getWindow().setBackgroundDrawable(Ui.panel(this, 26f));
+                confirm.getWindow().setDimAmount(0.78f);
+            }
+        });
+        confirm.show();
     }
 
     private View settingRow(String title, WheelPickerView picker) {
@@ -270,9 +371,7 @@ public final class MainActivity extends Activity {
         return lp;
     }
 
-    private WheelPickerView picker(int min, int max, int value) {
-        return new WheelPickerView(this, min, max, value);
-    }
+    private WheelPickerView picker(int min, int max, int value) { return new WheelPickerView(this, min, max, value); }
 
     private CheckBox check(String text, boolean checked) {
         CheckBox c = new CheckBox(this);
@@ -286,14 +385,10 @@ public final class MainActivity extends Activity {
     }
 
     private void toggleOverlay() {
-        if (OverlayService.isRunning()) {
-            stopService(new Intent(this, OverlayService.class));
-            return;
-        }
+        if (OverlayService.isRunning()) { stopService(new Intent(this, OverlayService.class)); return; }
         if (!Settings.canDrawOverlays(this)) {
             overlayRequested = true;
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()));
-            startActivity(intent);
+            startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName())));
             return;
         }
         startOverlay();
@@ -310,9 +405,7 @@ public final class MainActivity extends Activity {
         }
     }
 
-    private boolean isTablet() {
-        return getResources().getConfiguration().smallestScreenWidthDp >= 600;
-    }
+    private boolean isTablet() { return getResources().getConfiguration().smallestScreenWidthDp >= 600; }
 
     private void configureWindow() {
         getWindow().setStatusBarColor(Color.TRANSPARENT);
@@ -329,6 +422,15 @@ public final class MainActivity extends Activity {
             });
             decor.requestApplyInsets();
         }
+    }
+
+    private static String formatFocusDuration(long millis) {
+        long totalMinutes = Math.max(0L, millis / 60_000L);
+        long hours = totalMinutes / 60L;
+        long minutes = totalMinutes % 60L;
+        if (hours > 0L && minutes > 0L) return hours + "h " + minutes + "m";
+        if (hours > 0L) return hours + "h";
+        return totalMinutes + "m";
     }
 
     private static LinearLayout.LayoutParams wrap() {
