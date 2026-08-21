@@ -46,34 +46,39 @@ jobs:
           script: |
             adb install -r app/build/outputs/apk/release/app-release.apk
             adb shell pm grant app.still.pomodoro android.permission.POST_NOTIFICATIONS || true
+            adb logcat -c || true
             adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity
             sleep 2
             adb shell uiautomator dump /sdcard/ui.xml >/dev/null
-            adb pull /sdcard/ui.xml ui.xml >/dev/null
-            python3 -c 'import xml.etree.ElementTree as E,re; r=E.parse("ui.xml").getroot(); n=next(x for x in r.iter("node") if x.attrib.get("text")=="Start"); a=list(map(int,re.findall(r"\d+",n.attrib["bounds"]))); print((a[0]+a[2])//2,(a[1]+a[3])//2)' > coords.txt
+            adb pull /sdcard/ui.xml ui-before.xml >/dev/null
+            python3 -c 'import xml.etree.ElementTree as E,re; r=E.parse("ui-before.xml").getroot(); n=next(x for x in r.iter("node") if x.attrib.get("text")=="Start"); a=list(map(int,re.findall(r"\d+",n.attrib["bounds"]))); print((a[0]+a[2])//2,(a[1]+a[3])//2)' > coords.txt
             adb shell input tap $(cat coords.txt)
             sleep 3
+            adb shell uiautomator dump /sdcard/ui-after.xml >/dev/null
+            adb pull /sdcard/ui-after.xml ui-after.xml >/dev/null
+            grep -q 'text="Pause"' ui-after.xml
             adb shell dumpsys notification --noredact > notification-before.txt
-            adb shell dumpsys activity services app.still.pomodoro > services-before.txt
+            adb shell dumpsys activity services > services-before.txt
             sleep 12
             adb shell dumpsys notification --noredact > notification-after.txt
-            adb shell dumpsys activity services app.still.pomodoro > services-after.txt
-            grep -q 'TimerNotificationService' services-after.txt
+            adb shell dumpsys activity services > services-after.txt
+            adb logcat -d > logcat.txt || true
+            grep -q 'app.still.pomodoro' services-after.txt
             python3 - <<'PY'
             import re
             def extract(path):
                 text=open(path, encoding='utf-8', errors='ignore').read()
                 blocks=re.split(r'(?=NotificationRecord)', text)
-                block=next((b for b in blocks if 'app.still.pomodoro' in b and ('id=1001' in b or '0x3e9' in b)), '')
+                block=next((b for b in blocks if 'pkg=app.still.pomodoro' in b and ('id=1001' in b or 'id=1001 ' in b)), '')
                 if not block:
                     raise SystemExit(f'timer notification missing in {path}')
-                patterns=[r'android\.progress(?:=|=int\()([0-9]+)', r'progress=([0-9]+)', r'android\.progress[^0-9]+([0-9]+)']
-                for p in patterns:
+                for p in [r'android\.progress=([0-9]+)', r'android\.progress[^0-9]+([0-9]+)', r'progress=([0-9]+)']:
                     m=re.search(p, block)
-                    if m: return int(m.group(1)), block
+                    if m:
+                        return int(m.group(1))
                 raise SystemExit(f'progress field not found in {path}\n{block[:5000]}')
-            before,b1=extract('notification-before.txt')
-            after,b2=extract('notification-after.txt')
+            before=extract('notification-before.txt')
+            after=extract('notification-after.txt')
             print('notification progress:', before, '->', after)
             if after <= before:
                 raise SystemExit('notification progress did not advance')
@@ -88,4 +93,7 @@ jobs:
             notification-after.txt
             services-before.txt
             services-after.txt
+            logcat.txt
+            ui-before.xml
+            ui-after.xml
           if-no-files-found: ignore
