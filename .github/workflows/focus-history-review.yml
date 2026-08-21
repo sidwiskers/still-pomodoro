@@ -41,9 +41,10 @@ jobs:
           disable-animations: true
           script: |
             set -eu
+            PKG=app.still.pomodoro.debug
             adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell pm grant app.still.pomodoro android.permission.POST_NOTIFICATIONS || true
-            adb shell am start -W -n app.still.pomodoro/app.still.pomodoro.MainActivity >/dev/null
+            adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS || true
+            adb shell am start -W -n "$PKG"/app.still.pomodoro.MainActivity >/dev/null
             sleep 2
 
             click_text() {
@@ -66,12 +67,12 @@ jobs:
 
             click_text "Start"
             sleep 4
-            adb exec-out run-as app.still.pomodoro cat shared_prefs/still_timer.xml > running.xml
+            adb exec-out run-as "$PKG" cat shared_prefs/still_timer.xml > running.xml
             ! grep -q 'focus_day_' running.xml
 
             click_text "Pause"
             sleep 1
-            adb exec-out run-as app.still.pomodoro cat shared_prefs/still_timer.xml > paused.xml
+            adb exec-out run-as "$PKG" cat shared_prefs/still_timer.xml > paused.xml
             DAY_VALUE=$(python3 - <<'PY'
             import re
             s=open('paused.xml').read()
@@ -87,7 +88,7 @@ jobs:
             sleep 3
             click_text "Reset"
             sleep 1
-            adb exec-out run-as app.still.pomodoro cat shared_prefs/still_timer.xml > reset.xml
+            adb exec-out run-as "$PKG" cat shared_prefs/still_timer.xml > reset.xml
             RESET_VALUE=$(python3 - <<'PY'
             import re
             s=open('reset.xml').read()
