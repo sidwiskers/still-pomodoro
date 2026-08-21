@@ -54,12 +54,17 @@ jobs:
           folded=needle.casefold()
           xml=open('window.xml',encoding='utf-8').read()
           hits=re.findall(r'<node[^>]*text="([^"]*)"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',xml)
-          for text,x1,y1,x2,y2 in hits:
-              candidate=text.casefold()
-              if candidate == folded or folded in candidate:
-                  x=(int(x1)+int(x2))//2; y=(int(y1)+int(y2))//2
-                  subprocess.check_call(['adb','shell','input','tap',str(x),str(y)])
-                  sys.exit(0)
+          def tap(hit):
+              text,x1,y1,x2,y2=hit
+              x=(int(x1)+int(x2))//2; y=(int(y1)+int(y2))//2
+              subprocess.check_call(['adb','shell','input','tap',str(x),str(y)])
+              sys.exit(0)
+          for hit in hits:
+              if hit[0].casefold() == folded:
+                  tap(hit)
+          for hit in hits:
+              if folded in hit[0].casefold():
+                  tap(hit)
           raise SystemExit('text not found: '+needle)
           PY
           }
