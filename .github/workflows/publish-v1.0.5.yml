@@ -60,7 +60,9 @@ jobs:
         shell: bash
         run: |
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk | tee signature.txt
-          grep -Fq '7E:62:DD:1A:EF:F8:EB:A4:F0:AF:7D:74:34:D6:FD:A2:FD:0F:DD:D1:22:D0:5F:D7:77:4F:EC:4C:79:26:AC:CC' signature.txt
+          ACTUAL=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' signature.txt | head -1 | tr '[:lower:]' '[:upper:]' | tr -d ':[:space:]')
+          EXPECTED='7E62DD1AEFF8EBA4F0AF7D7434D6FDA2FD0FDDD122D05FD7774FEC4C7926ACCC'
+          test "$ACTUAL" = "$EXPECTED"
 
       - name: Name and hash APK
         shell: bash
