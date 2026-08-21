@@ -1,0 +1,32 @@
+name: Real cat candidates
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch public-domain cat recording
+        run: |
+          curl -L --fail --retry 3 \
+            'https://upload.wikimedia.org/wikipedia/commons/6/6b/Meow_of_a_pleading_cat.oga' \
+            -o cat-source.oga
+          ffprobe -v error -show_entries format=duration,size -of default=nw=1 cat-source.oga
+      - name: Convert source for review
+        run: |
+          ffmpeg -hide_banner -y -i cat-source.oga -ac 1 -ar 32000 cat-source.wav
+          ffmpeg -hide_banner -i cat-source.wav -af silencedetect=noise=-34dB:d=0.12 -f null - 2> silence.txt || true
+      - name: Upload source and analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-cat-source
+          path: |
+            cat-source.oga
+            cat-source.wav
+            silence.txt
+          if-no-files-found: error
