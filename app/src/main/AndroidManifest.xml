@@ -40,6 +40,15 @@
         </receiver>
 
         <service
+            android:name=".TimerNotificationService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Active Pomodoro notification progress refresh while the timer is running" />
+        </service>
+
+        <service
             android:name=".OverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
